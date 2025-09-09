@@ -2,6 +2,9 @@ package edu.cnu.swacademy.security.auth;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
 import edu.cnu.swacademy.security.common.BaseEntity;
 import edu.cnu.swacademy.security.user.User;
 import jakarta.persistence.Column;
@@ -11,13 +14,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @AllArgsConstructor
@@ -33,7 +34,7 @@ public class Authentication extends BaseEntity {
   @Column(columnDefinition = "INT UNSIGNED")
   private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(nullable = false)
   private User user;
 
@@ -45,6 +46,11 @@ public class Authentication extends BaseEntity {
 
   public Authentication(User user, String refreshToken, LocalDateTime expiredAt) {
     this.user = user;
+    this.refreshToken = refreshToken;
+    this.expiredAt = expiredAt;
+  }
+
+  public void updateRefreshToken(String refreshToken, LocalDateTime expiredAt) {
     this.refreshToken = refreshToken;
     this.expiredAt = expiredAt;
   }

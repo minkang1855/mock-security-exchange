@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import edu.cnu.swacademy.security.auth.dto.LoginRequest;
 import edu.cnu.swacademy.security.auth.dto.LoginResponse;
+import edu.cnu.swacademy.security.auth.dto.TokenReissueRequest;
 import edu.cnu.swacademy.security.common.ErrorCode;
 import edu.cnu.swacademy.security.common.HashUtil;
 import edu.cnu.swacademy.security.common.JwtUtil;
@@ -44,5 +45,24 @@ public class AuthService {
     );
 
     return new LoginResponse(tokenInfo);
+  }
+
+  @Transactional
+  public LoginResponse reissue(TokenReissueRequest request) throws SecurityException {
+
+    if (!jwtUtil.validateToken(request.refreshToken())) {
+      throw new SecurityException(ErrorCode.REFRESH_TOKEN_INVALID);
+    }
+
+    Long userId = jwtUtil.getUserIdFromToken(request.refreshToken());
+
+    Authentication authentication = authenticationRepository.findByUserIdAndRefreshToken(userId, request.refreshToken())
+        .orElseThrow(() -> new SecurityException(ErrorCode.REFRESH_TOKEN_NOT_FOUND));
+
+    TokenInfo newTokenInfo = jwtUtil.generateAccessAndRefreshToken(userId);
+
+    authentication.updateRefreshToken(newTokenInfo.refreshToken(), newTokenInfo.refreshTokenExpiredAt());
+
+    return new LoginResponse(newTokenInfo);
   }
 }

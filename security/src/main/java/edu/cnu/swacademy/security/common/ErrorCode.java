@@ -9,7 +9,10 @@ public enum ErrorCode {
 
   INVALID_CREDENTIALS("401", "Invalid credentials."),
 
+  REFRESH_TOKEN_INVALID("403", "Refresh token is invalid."),
+
   USER_NOT_FOUND("404", "User not found."),
+  REFRESH_TOKEN_NOT_FOUND("404", "Refresh token not found."),
 
   EMAIL_ALREADY_EXISTS("409", "Email already exists."),
 
