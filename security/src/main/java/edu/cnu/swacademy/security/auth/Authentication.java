@@ -42,4 +42,10 @@ public class Authentication extends BaseEntity {
 
   @Column(nullable = false)
   private LocalDateTime expiredAt;
+
+  public Authentication(User user, String refreshToken, LocalDateTime expiredAt) {
+    this.user = user;
+    this.refreshToken = refreshToken;
+    this.expiredAt = expiredAt;
+  }
 }
