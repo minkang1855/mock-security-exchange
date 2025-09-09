@@ -16,10 +16,10 @@ import org.hibernate.annotations.SQLRestriction;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+@SQLRestriction("deleted_at IS NULL")
+@SQLDelete(sql = "UPDATE stock SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Table(name = "stock")
 @Entity
-@SQLDelete(sql = "UPDATE stock SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@SQLRestriction("deleted_at IS NULL")
 public class Stock extends BaseEntity {
 
   @Id

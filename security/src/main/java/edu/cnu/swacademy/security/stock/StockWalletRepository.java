@@ -2,6 +2,7 @@ package edu.cnu.swacademy.security.stock;
 
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface StockWalletRepository extends JpaRepository<StockWallet, Long> {
