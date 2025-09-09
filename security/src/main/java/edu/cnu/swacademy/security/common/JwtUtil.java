@@ -6,12 +6,14 @@ import java.util.Date;
 
 import javax.crypto.SecretKey;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
+@Slf4j
 @Component
 public class JwtUtil {
 
@@ -56,34 +58,6 @@ public class JwtUtil {
         .compact();
   }
 
-  public LocalDateTime getAccessTokenExpiredAt(String accessToken) throws SecurityException {
-    try {
-      Date expiration = Jwts.parser()
-          .verifyWith(secretKey)
-          .build()
-          .parseSignedClaims(accessToken)
-          .getPayload()
-          .getExpiration();
-      return expiration.toInstant().atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime();
-    } catch (Exception e) {
-      throw new SecurityException(ErrorCode.JWT_TOKEN_PARSE_FAILED, e);
-    }
-  }
-
-  public LocalDateTime getRefreshTokenExpiredAt(String refreshToken) throws SecurityException {
-    try {
-      Date expiration = Jwts.parser()
-          .verifyWith(secretKey)
-          .build()
-          .parseSignedClaims(refreshToken)
-          .getPayload()
-          .getExpiration();
-      return expiration.toInstant().atZone(ZoneId.of("Asia/Seoul")).toLocalDateTime();
-    } catch (Exception e) {
-      throw new SecurityException(ErrorCode.JWT_TOKEN_PARSE_FAILED, e);
-    }
-  }
-
   public boolean validateToken(String token) {
     try {
       Jwts.parser()
@@ -92,6 +66,7 @@ public class JwtUtil {
           .parseSignedClaims(token);
       return true;
     } catch (Exception e) {
+      log.warn("failed to validate token. e = {}, msg = {}", e.getClass(), e.getMessage());
       return false;
     }
   }

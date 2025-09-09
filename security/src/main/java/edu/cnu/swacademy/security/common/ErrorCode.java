@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 public enum ErrorCode {
 
   INVALID_CREDENTIALS("401", "Invalid credentials."),
+  UNAUTHORIZED("401", "Unauthorized"),
 
   REFRESH_TOKEN_INVALID("403", "Refresh token is invalid."),
 
