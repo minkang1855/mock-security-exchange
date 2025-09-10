@@ -1,6 +1,7 @@
 package edu.cnu.swacademy.security.asset;
 
 import edu.cnu.swacademy.security.asset.dto.CashDepositRequest;
+import edu.cnu.swacademy.security.asset.dto.CashWithdrawalRequest;
 import edu.cnu.swacademy.security.common.SecurityException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,5 +29,11 @@ public class CashWalletController {
   public void deposit(HttpServletRequest request, @Valid @RequestBody CashDepositRequest depositRequest) throws SecurityException {
     Long userId = (Long) request.getAttribute("user_id");
     cashWalletService.deposit(userId, depositRequest);
+  }
+
+  @PostMapping("/withdrawal")
+  public void withdrawal(HttpServletRequest request, @Valid @RequestBody CashWithdrawalRequest withdrawalRequest) throws SecurityException {
+    Long userId = (Long) request.getAttribute("user_id");
+    cashWalletService.withdrawal(userId, withdrawalRequest);
   }
 }

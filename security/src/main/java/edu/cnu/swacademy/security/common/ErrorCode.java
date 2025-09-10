@@ -20,6 +20,7 @@ public enum ErrorCode {
   WALLET_ALREADY_EXISTS("409", "Wallet already exists."),
 
   CASH_WALLET_BLOCKED("412", "Cash wallet is blocked."),
+  INSUFFICIENT_BALANCE("428", "Insufficient balance."),
 
   PASSWORD_HASHING_FAILED("500", "Password hashing failed."),
   JWT_TOKEN_PARSE_FAILED("500", "JWT token parse failed."),
