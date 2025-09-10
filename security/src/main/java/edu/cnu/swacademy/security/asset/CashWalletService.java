@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import edu.cnu.swacademy.security.asset.dto.CashBalanceResponse;
 import edu.cnu.swacademy.security.asset.dto.CashDepositRequest;
 import edu.cnu.swacademy.security.asset.dto.CashWithdrawalRequest;
 import edu.cnu.swacademy.security.common.AccountNumberGenerator;
@@ -146,5 +147,40 @@ public class CashWalletService {
 
     log.info("Cash withdrawal completed: user-id(={}), amount(={}), new-balance(={})",
         userId, withdrawalAmount, cashWallet.getReserve());
+  }
+
+  /**
+   * 현금 잔액 조회
+   * 사용자의 현금 지갑 상태를 확인하여 예치금, 대기중인 매수 주문으로 묶인 금액, 
+   * 그리고 실제 출금 가능 금액을 조회합니다.
+   * 
+   * @param userId 사용자 ID (JWT에서 추출된 값)
+   * @return 현금 잔액 정보 (지갑 ID, 예치금, 묶인 금액, 출금 가능 금액)
+   * @throws SecurityException 조회 실패 시 발생 (계좌 없음, 정지 상태 등)
+   */
+  public CashBalanceResponse getBalance(Long userId) throws SecurityException {
+    // 1. 사용자의 현금 계좌 조회
+    CashWallet cashWallet = cashWalletRepository.findByUserId(userId)
+        .orElseThrow(() -> {
+          log.info("Cash wallet not found for user-id(={})", userId);
+          return new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND);
+        });
+
+    // 2. 지갑 정지 상태 확인 (정지된 계좌는 조회 불가)
+    if (cashWallet.isBlocked()) {
+      log.info("Cash wallet is blocked for user-id(={})", userId);
+      throw new SecurityException(ErrorCode.CASH_WALLET_BLOCKED);
+    }
+
+    // 3. 잔액 정보 계산
+    int cashWalletId = cashWallet.getId().intValue();
+    int savings = cashWallet.getReserve(); // 예치금
+    int tiedSavings = cashWallet.getDeposit(); // 대기중인 매수 주문으로 묶인 금액
+    int available = savings - tiedSavings; // 출금 가능 금액 (예치금 - 묶인 금액)
+
+    log.info("Cash balance retrieved: user-id(={}), wallet-id(={}), savings(={}), tied-savings(={}), available(={})",
+        userId, cashWalletId, savings, tiedSavings, available);
+
+    return new CashBalanceResponse(cashWalletId, savings, tiedSavings, available);
   }
 }

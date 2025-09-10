@@ -1,13 +1,15 @@
 package edu.cnu.swacademy.security.asset;
 
-import edu.cnu.swacademy.security.asset.dto.CashDepositRequest;
-import edu.cnu.swacademy.security.asset.dto.CashWithdrawalRequest;
-import edu.cnu.swacademy.security.common.SecurityException;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import edu.cnu.swacademy.security.asset.dto.CashBalanceResponse;
+import edu.cnu.swacademy.security.asset.dto.CashDepositRequest;
+import edu.cnu.swacademy.security.asset.dto.CashWithdrawalRequest;
+import edu.cnu.swacademy.security.common.SecurityException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,5 +37,11 @@ public class CashWalletController {
   public void withdrawal(HttpServletRequest request, @Valid @RequestBody CashWithdrawalRequest withdrawalRequest) throws SecurityException {
     Long userId = (Long) request.getAttribute("user_id");
     cashWalletService.withdrawal(userId, withdrawalRequest);
+  }
+
+  @GetMapping("/balance")
+  public CashBalanceResponse getBalance(HttpServletRequest request) throws SecurityException {
+    Long userId = (Long) request.getAttribute("user_id");
+    return cashWalletService.getBalance(userId);
   }
 }

@@ -37,10 +37,10 @@ public class CashWallet extends BaseEntity {
   private String accountNumber;
 
   @Column(nullable = false, columnDefinition = "BIGINT UNSIGNED DEFAULT 0")
-  private long reserve = 0L;
+  private int reserve = 0;
 
   @Column(nullable = false, columnDefinition = "BIGINT UNSIGNED DEFAULT 0")
-  private long deposit = 0L;
+  private int deposit = 0;
 
   @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
   private boolean isBlocked = false;
@@ -50,11 +50,11 @@ public class CashWallet extends BaseEntity {
     this.accountNumber = accountNumber;
   }
 
-  public void deposit(long amount) {
+  public void deposit(int amount) {
     this.reserve += amount;
   }
 
-  public void withdrawal(long amount) {
+  public void withdrawal(int amount) {
     this.reserve -= amount;
   }
 }
