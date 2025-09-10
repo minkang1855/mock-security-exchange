@@ -61,7 +61,7 @@ public class AuthService {
       throw new SecurityException(ErrorCode.REFRESH_TOKEN_INVALID);
     }
 
-    Long userId = jwtUtil.getUserIdFromToken(request.refreshToken());
+    int userId = jwtUtil.getUserIdFromToken(request.refreshToken());
 
     Authentication authentication = authenticationRepository.findByUserIdAndRefreshToken(userId, request.refreshToken())
         .orElseThrow(() -> {

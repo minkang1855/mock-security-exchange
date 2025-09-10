@@ -25,7 +25,7 @@ public class Stock extends BaseEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(columnDefinition = "INT UNSIGNED")
-  private Long id;
+  private int id;
 
   @Column(nullable = false, unique = true)
   private String name;

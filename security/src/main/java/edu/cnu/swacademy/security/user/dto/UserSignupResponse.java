@@ -1,3 +1,3 @@
 package edu.cnu.swacademy.security.user.dto;
 
-public record UserSignupResponse(long userId) {}
+public record UserSignupResponse(int userId) {}

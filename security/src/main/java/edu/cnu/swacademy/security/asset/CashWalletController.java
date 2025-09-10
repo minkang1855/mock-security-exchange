@@ -23,25 +23,25 @@ public class CashWalletController {
 
   @PostMapping
   public void createCashWallet(HttpServletRequest request) throws SecurityException {
-    Long userId = (Long) request.getAttribute("user_id");
+    int userId = (int) request.getAttribute("user_id");
     cashWalletService.createCashWallet(userId);
   }
 
   @PostMapping("/deposit")
   public void deposit(HttpServletRequest request, @Valid @RequestBody CashDepositRequest depositRequest) throws SecurityException {
-    Long userId = (Long) request.getAttribute("user_id");
+    int userId = (int) request.getAttribute("user_id");
     cashWalletService.deposit(userId, depositRequest);
   }
 
   @PostMapping("/withdrawal")
   public void withdrawal(HttpServletRequest request, @Valid @RequestBody CashWithdrawalRequest withdrawalRequest) throws SecurityException {
-    Long userId = (Long) request.getAttribute("user_id");
+    int userId = (int) request.getAttribute("user_id");
     cashWalletService.withdrawal(userId, withdrawalRequest);
   }
 
   @GetMapping("/balance")
   public CashBalanceResponse getBalance(HttpServletRequest request) throws SecurityException {
-    Long userId = (Long) request.getAttribute("user_id");
+    int userId = (int) request.getAttribute("user_id");
     return cashWalletService.getBalance(userId);
   }
 }

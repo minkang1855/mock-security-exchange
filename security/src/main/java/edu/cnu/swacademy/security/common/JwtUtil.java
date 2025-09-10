@@ -31,7 +31,7 @@ public class JwtUtil {
     this.refreshTokenExpiredDays = refreshTokenExpiredAt;
   }
 
-  public TokenInfo generateAccessAndRefreshToken(Long userId) {
+  public TokenInfo generateAccessAndRefreshToken(int userId) {
     LocalDateTime now = LocalDateTime.now();
     LocalDateTime accessTokenExpiredAt = now.plusMinutes(accessTokenExpiredMinutes);
     LocalDateTime refreshTokenExpiredAt = now.plusDays(refreshTokenExpiredDays);
@@ -47,11 +47,11 @@ public class JwtUtil {
     );
   }
 
-  public String generateToken(Long userId, LocalDateTime expiredAt) {
+  public String generateToken(int userId, LocalDateTime expiredAt) {
     LocalDateTime now = LocalDateTime.now();
 
     return Jwts.builder()
-        .subject(userId.toString())
+        .subject(String.valueOf(userId))
         .issuedAt(Date.from(now.atZone(ZoneId.of("Asia/Seoul")).toInstant())) // UTC로 저장
         .expiration(Date.from(expiredAt.atZone(ZoneId.of("Asia/Seoul")).toInstant())) // UTC로 저장
         .signWith(secretKey)
@@ -71,7 +71,7 @@ public class JwtUtil {
     }
   }
 
- public Long getUserIdFromToken(String token) throws SecurityException {
+ public int getUserIdFromToken(String token) throws SecurityException {
    try {
      String subject = Jwts.parser()
          .verifyWith(secretKey)
@@ -79,7 +79,7 @@ public class JwtUtil {
          .parseSignedClaims(token)
          .getPayload()
          .getSubject();
-     return Long.parseLong(subject);
+     return Integer.parseInt(subject);
    } catch (Exception e) {
      throw new SecurityException(ErrorCode.JWT_TOKEN_PARSE_FAILED, e);
    }

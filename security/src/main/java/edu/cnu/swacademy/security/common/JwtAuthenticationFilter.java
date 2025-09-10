@@ -44,7 +44,7 @@ public class JwtAuthenticationFilter implements Filter {
         return;
       }
 
-      Long userId = jwtUtil.getUserIdFromToken(token);
+      int userId = jwtUtil.getUserIdFromToken(token);
       log.info("JwtAuthenticationFilter got user id (= {})", userId);
       httpRequest.setAttribute("user_id", userId);
 

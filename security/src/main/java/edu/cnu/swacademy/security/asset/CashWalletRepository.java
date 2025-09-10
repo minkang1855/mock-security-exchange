@@ -8,17 +8,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
-public interface CashWalletRepository extends JpaRepository<CashWallet, Long> {
+public interface CashWalletRepository extends JpaRepository<CashWallet, Integer> {
 
   Optional<CashWallet> findByAccountNumber(String accountNumber);
 
-  Optional<CashWallet> findByUserId(Long userId);
+  Optional<CashWallet> findByUserId(int userId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT cw FROM CashWallet cw WHERE cw.user.id = :userId")
-  Optional<CashWallet> findByUserIdWithLock(Long userId);
+  Optional<CashWallet> findByUserIdWithLock(int userId);
 
   boolean existsByAccountNumber(String accountNumber);
   
-  boolean existsByUserId(Long userId);
+  boolean existsByUserId(int userId);
 }

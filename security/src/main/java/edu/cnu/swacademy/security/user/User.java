@@ -24,7 +24,7 @@ public class User extends BaseEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(columnDefinition = "INT UNSIGNED")
-  private Long id;
+  private int id;
 
   @Column(nullable = false, length = 10)
   private String name;

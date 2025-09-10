@@ -29,7 +29,7 @@ public class CashWalletService {
   private final AesUtil aesUtil;
 
   @Transactional(rollbackFor = Exception.class)
-  public void createCashWallet(Long userId) throws SecurityException {
+  public void createCashWallet(int userId) throws SecurityException {
 
     User user = userRepository.findById(userId)
         .orElseThrow(() -> {
@@ -67,7 +67,7 @@ public class CashWalletService {
   }
 
   @Transactional(rollbackFor = Exception.class, isolation = Isolation.SERIALIZABLE)
-  public void deposit(Long userId, CashDepositRequest request) throws SecurityException {
+  public void deposit(int userId, CashDepositRequest request) throws SecurityException {
     // 1. 사용자의 현금 계좌 조회 (비관적 락 적용)
     CashWallet cashWallet = cashWalletRepository.findByUserIdWithLock(userId)
         .orElseThrow(() -> {
@@ -108,7 +108,7 @@ public class CashWalletService {
    * @throws SecurityException 출금 실패 시 발생 (계좌 없음, 정지 상태, 잔액 부족 등)
    */
   @Transactional(rollbackFor = Exception.class, isolation = Isolation.SERIALIZABLE)
-  public void withdrawal(Long userId, CashWithdrawalRequest request) throws SecurityException {
+  public void withdrawal(int userId, CashWithdrawalRequest request) throws SecurityException {
     // 1. 사용자의 현금 계좌 조회 (비관적 락 적용으로 동시성 이슈 방지)
     CashWallet cashWallet = cashWalletRepository.findByUserIdWithLock(userId)
         .orElseThrow(() -> {
@@ -158,7 +158,7 @@ public class CashWalletService {
    * @return 현금 잔액 정보 (지갑 ID, 예치금, 묶인 금액, 출금 가능 금액)
    * @throws SecurityException 조회 실패 시 발생 (계좌 없음, 정지 상태 등)
    */
-  public CashBalanceResponse getBalance(Long userId) throws SecurityException {
+  public CashBalanceResponse getBalance(int userId) throws SecurityException {
     // 1. 사용자의 현금 계좌 조회
     CashWallet cashWallet = cashWalletRepository.findByUserId(userId)
         .orElseThrow(() -> {
@@ -173,7 +173,7 @@ public class CashWalletService {
     }
 
     // 3. 잔액 정보 계산
-    int cashWalletId = cashWallet.getId().intValue();
+    int cashWalletId = cashWallet.getId();
     int savings = cashWallet.getReserve(); // 예치금
     int tiedSavings = cashWallet.getDeposit(); // 대기중인 매수 주문으로 묶인 금액
     int available = savings - tiedSavings; // 출금 가능 금액 (예치금 - 묶인 금액)
