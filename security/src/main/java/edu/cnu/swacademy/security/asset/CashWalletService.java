@@ -49,7 +49,7 @@ public class CashWalletService {
 
     if (cashWalletRepository.existsByUserId(userId)) {
       log.info("Cash wallet already exists for user-id(={})", userId);
-      throw new SecurityException(ErrorCode.WALLET_ALREADY_EXISTS);
+      throw new SecurityException(ErrorCode.CASH_WALLET_ALREADY_EXISTS);
     }
     
     String uniqueAccountNumber = generateUniqueAccountNumber();
@@ -227,5 +227,43 @@ public class CashWalletService {
         (int) historyPage.getTotalElements(),
         historyResponses
     );
+  }
+
+  /**
+   * 현금 계좌 정지
+   * 사용자의 현금 지갑을 정지하여 모든 현금 관련 거래를 차단합니다.
+   * 
+   * @param userId 사용자 ID (JWT에서 추출된 값)
+   * @throws SecurityException 정지 실패 시 발생 (계좌 없음, 이미 정지됨 등)
+   */
+  @Transactional(rollbackFor = Exception.class)
+  public void blockCashWallet(int cashWalletId) throws SecurityException {
+    // 1. 사용자의 현금 계좌 조회
+    CashWallet cashWallet = cashWalletRepository.findById(cashWalletId)
+        .orElseThrow(() -> {
+          log.info("Cash wallet not found for id(={})", cashWalletId);
+          return new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND);
+        });
+
+    // 2. 이미 정지된 계좌인지 확인
+    if (cashWallet.isBlocked()) {
+      log.info("Cash wallet is already blocked for id(={})", cashWalletId);
+      throw new SecurityException(ErrorCode.CASH_WALLET_ALREADY_BLOCKED);
+    }
+
+    // 3. 계좌 정지 처리
+    cashWallet.block();
+
+    // 4. 계좌 정지 내역 생성 (거래 내역 기록)
+    CashWalletHistory history = new CashWalletHistory(
+        cashWallet,
+        TransactionType.ACCOUNT_BLOCKED,
+        0, // 정지 시에는 금액 변동 없음
+        "계좌 정지",
+        cashWallet.getReserve()
+    );
+    cashWalletHistoryRepository.save(history);
+
+    log.info("Cash wallet blocked successfully: cash-wallet-id(={})", cashWallet.getId());
   }
 }

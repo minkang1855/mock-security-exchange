@@ -17,7 +17,8 @@ public enum ErrorCode {
   CASH_WALLET_NOT_FOUND("404", "Cash wallet not found."),
 
   EMAIL_ALREADY_EXISTS("409", "Email already exists."),
-  WALLET_ALREADY_EXISTS("409", "Wallet already exists."),
+  CASH_WALLET_ALREADY_EXISTS("409", "Cash wallet already exists."),
+  CASH_WALLET_ALREADY_BLOCKED("409", "Cash wallet is already blocked."),
 
   CASH_WALLET_BLOCKED("412", "Cash wallet is blocked."),
   INSUFFICIENT_BALANCE("428", "Insufficient balance."),

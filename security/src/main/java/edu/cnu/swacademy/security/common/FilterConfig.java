@@ -13,7 +13,13 @@ public class FilterConfig {
     registrationBean.setFilter(jwtAuthenticationFilter);
     
     // JWT 인증이 필요한 경로들
-    registrationBean.addUrlPatterns("/api/v1/cash-wallet/*");
+    // Cash Wallet API
+    registrationBean.addUrlPatterns("/api/v1/cash-wallet");
+    registrationBean.addUrlPatterns("/api/v1/cash-wallet/deposit");
+    registrationBean.addUrlPatterns("/api/v1/cash-wallet/withdrawal");
+    registrationBean.addUrlPatterns("/api/v1/cash-wallet/balance");
+    registrationBean.addUrlPatterns("/api/v1/cash-wallet/histories");
+
     registrationBean.addUrlPatterns("/api/v1/stock-wallet/*");
     registrationBean.addUrlPatterns("/api/v1/order/*");
     registrationBean.addUrlPatterns("/api/v1/orderbook/*");

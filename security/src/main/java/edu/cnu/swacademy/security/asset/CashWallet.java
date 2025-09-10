@@ -60,4 +60,8 @@ public class CashWallet extends BaseEntity {
   public void withdrawal(int amount) {
     this.reserve -= amount;
   }
+
+  public void block() {
+    this.isBlocked = true;
+  }
 }
