@@ -9,16 +9,14 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @SQLRestriction("deleted_at IS NULL")
 @SQLDelete(sql = "UPDATE cash_wallet SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
@@ -31,7 +29,7 @@ public class CashWallet extends BaseEntity {
   @Column(columnDefinition = "INT UNSIGNED")
   private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(nullable = false)
   private User user;
 
@@ -46,4 +44,9 @@ public class CashWallet extends BaseEntity {
 
   @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
   private boolean isBlocked = false;
+
+  public CashWallet(User user, String accountNumber) {
+    this.user = user;
+    this.accountNumber = accountNumber;
+  }
 }

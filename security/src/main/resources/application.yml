@@ -20,3 +20,6 @@ jwt:
   secret-key: ${JWT_SECRET_KEY}
   access-token-expired-at: ${ACCESS_TOKEN_EXPIRED_AT:5}
   refresh-token-expired-at: ${REFRESH_TOKEN_EXPIRED_AT:7}
+
+aes:
+  secret-key: ${AES_SECRET_KEY}
