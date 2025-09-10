@@ -1,9 +1,10 @@
 package edu.cnu.swacademy.security.asset;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,9 +22,6 @@ import edu.cnu.swacademy.security.user.User;
 import edu.cnu.swacademy.security.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Arrays;
-import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -103,8 +101,7 @@ public class CashWalletService {
     );
     cashWalletHistoryRepository.save(history);
 
-    log.info("Cash deposit completed: user-id(={}), amount(={}), new-balance(={})",
-        userId, request.amount(), cashWallet.getReserve());
+    log.info("Cash deposit completed: user-id(={}), cash-wallet-id(={})", userId, cashWallet.getId());
   }
 
   /**
@@ -136,8 +133,7 @@ public class CashWalletService {
     long availableBalance = cashWallet.getReserve() - cashWallet.getDeposit(); // 현재는 대기중인 주문이 없으므로 예치금이 출금 가능 금액
     
     if (availableBalance < withdrawalAmount) {
-      log.info("Insufficient balance for user-id(={}), requested-amount(={}), available-balance(={})", 
-          userId, withdrawalAmount, availableBalance);
+      log.error("Insufficient balance for cash-wallet-id(={}),", cashWallet.getId());
       throw new SecurityException(ErrorCode.INSUFFICIENT_BALANCE);
     }
 
@@ -154,8 +150,7 @@ public class CashWalletService {
     );
     cashWalletHistoryRepository.save(history);
 
-    log.info("Cash withdrawal completed: user-id(={}), amount(={}), new-balance(={})",
-        userId, withdrawalAmount, cashWallet.getReserve());
+    log.info("Cash withdrawal completed: user-id(={}), cash-wallet-id(={})", userId, cashWallet.getId());
   }
 
   /**
@@ -177,7 +172,7 @@ public class CashWalletService {
 
     // 2. 지갑 정지 상태 확인 (정지된 계좌는 조회 불가)
     if (cashWallet.isBlocked()) {
-      log.info("Cash wallet is blocked for user-id(={})", userId);
+      log.info("Cash wallet is blocked for id(={})", cashWallet.getId());
       throw new SecurityException(ErrorCode.CASH_WALLET_BLOCKED);
     }
 
@@ -187,8 +182,7 @@ public class CashWalletService {
     int tiedSavings = cashWallet.getDeposit(); // 대기중인 매수 주문으로 묶인 금액
     int available = savings - tiedSavings; // 출금 가능 금액 (예치금 - 묶인 금액)
 
-    log.info("Cash balance retrieved: user-id(={}), wallet-id(={}), savings(={}), tied-savings(={}), available(={})",
-        userId, cashWalletId, savings, tiedSavings, available);
+    log.info("Cash balance retrieved: user-id(={}), cash-wallet-id(={})",userId, cashWalletId);
 
     return new CashBalanceResponse(cashWalletId, savings, tiedSavings, available);
   }
