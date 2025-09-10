@@ -39,15 +39,15 @@ public class CashWalletHistory extends BaseEntity {
   private TransactionType txType;
 
   @Column(nullable = false)
-  private long txAmount;
+  private int txAmount;
 
   @Column(nullable = false, length = 100)
   private String txNote;
 
   @Column(nullable = false, columnDefinition = "BIGINT UNSIGNED")
-  private long reserve;
+  private int reserve;
 
-  public CashWalletHistory(CashWallet cashWallet, TransactionType txType, long txAmount, String txNote, long reserve) {
+  public CashWalletHistory(CashWallet cashWallet, TransactionType txType, int txAmount, String txNote, int reserve) {
     this.cashWallet = cashWallet;
     this.txType = txType;
     this.txAmount = txAmount;

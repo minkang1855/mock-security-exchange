@@ -1,11 +1,17 @@
 package edu.cnu.swacademy.security.asset;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import edu.cnu.swacademy.security.asset.dto.CashBalanceResponse;
 import edu.cnu.swacademy.security.asset.dto.CashDepositRequest;
+import edu.cnu.swacademy.security.asset.dto.CashWalletHistoriesResponse;
+import edu.cnu.swacademy.security.asset.dto.CashWalletHistoryResponse;
 import edu.cnu.swacademy.security.asset.dto.CashWithdrawalRequest;
 import edu.cnu.swacademy.security.common.AccountNumberGenerator;
 import edu.cnu.swacademy.security.common.AesUtil;
@@ -15,6 +21,9 @@ import edu.cnu.swacademy.security.user.User;
 import edu.cnu.swacademy.security.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -90,7 +99,7 @@ public class CashWalletService {
         TransactionType.DEPOSIT,
         request.amount(),
         "현금 입금",
-        cashWallet.getDeposit()
+        cashWallet.getReserve()
     );
     cashWalletHistoryRepository.save(history);
 
@@ -182,5 +191,41 @@ public class CashWalletService {
         userId, cashWalletId, savings, tiedSavings, available);
 
     return new CashBalanceResponse(cashWalletId, savings, tiedSavings, available);
+  }
+
+  /**
+   * 현금 입출금 내역 조회
+   * 사용자의 현금 지갑 내역을 페이지 단위로 조회합니다.
+   * 
+   * @param userId 사용자 ID (JWT에서 추출된 값)
+   * @param pageable 페이지네이션 정보 (기본값: size=10, page=0, sort=createdAt DESC)
+   * @return 현금 입출금 내역 목록 (페이지 정보 포함)
+   * @throws SecurityException 조회 실패 시 발생 (계좌 정지 상태)
+   */
+  public CashWalletHistoriesResponse getHistories(int userId, Pageable pageable) throws SecurityException {
+    // 1. 현금 지갑 내역 조회 (입금/출금만 조회, 정지되지 않은 지갑만)
+    List<TransactionType> depositAndWithdrawalTypes = Arrays.asList(TransactionType.DEPOSIT, TransactionType.WITHDRAWAL);
+    Page<CashWalletHistory> historyPage = cashWalletHistoryRepository.findByUserIdAndTxTypeInAndWalletNotBlocked(
+        userId, depositAndWithdrawalTypes, pageable);
+
+    // 4. 응답 DTO 변환
+    List<CashWalletHistoryResponse> historyResponses = historyPage.getContent().stream()
+        .map(history -> new CashWalletHistoryResponse(
+            history.getId(),
+            history.getTxType().getDescription(), // TransactionType enum의 description 사용
+            history.getTxAmount(),
+            history.getTxNote(),
+            history.getReserve(),
+            history.getCreatedAt() // LocalDateTime을 직접 전달하여 DTO 내부에서 포맷팅
+        ))
+        .toList();
+
+    log.info("Cash wallet histories retrieved: user-id(={}), total-elements(={}), page(={}), size(={}), sort(={})",
+        userId, historyPage.getTotalElements(), pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort());
+
+    return new CashWalletHistoriesResponse(
+        (int) historyPage.getTotalElements(),
+        historyResponses
+    );
   }
 }
