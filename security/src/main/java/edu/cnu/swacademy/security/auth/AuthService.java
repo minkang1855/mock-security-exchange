@@ -25,15 +25,19 @@ public class AuthService {
   private final AuthenticationRepository authenticationRepository;
   private final JwtUtil jwtUtil;
 
-  @Transactional
+  @Transactional(rollbackFor = Exception.class)
   public LoginResponse login(LoginRequest request) throws SecurityException {
 
     User user = userRepository.findByEmail(request.userEmail())
-        .orElseThrow(() -> new SecurityException(ErrorCode.USER_NOT_FOUND));
+        .orElseThrow(() -> {
+          log.info("User not found with email: {}", request.userEmail());
+          return new SecurityException(ErrorCode.USER_NOT_FOUND);
+        });
     log.info("Got user id (={})", user.getId());
 
     String hashedPassword = HashUtil.sha512(request.userPassword());
     if (!user.getPassword().equals(hashedPassword)) {
+      log.info("Invalid credentials for email: {}", request.userEmail());
       throw new SecurityException(ErrorCode.INVALID_CREDENTIALS);
     }
 
@@ -50,7 +54,7 @@ public class AuthService {
     return new LoginResponse(tokenInfo);
   }
 
-  @Transactional
+  @Transactional(rollbackFor = Exception.class)
   public LoginResponse reissue(TokenReissueRequest request) throws SecurityException {
 
     if (!jwtUtil.validateToken(request.refreshToken())) {
@@ -60,7 +64,10 @@ public class AuthService {
     Long userId = jwtUtil.getUserIdFromToken(request.refreshToken());
 
     Authentication authentication = authenticationRepository.findByUserIdAndRefreshToken(userId, request.refreshToken())
-        .orElseThrow(() -> new SecurityException(ErrorCode.REFRESH_TOKEN_NOT_FOUND));
+        .orElseThrow(() -> {
+          log.info("Refresh token not found for userId: {}", userId);
+          return new SecurityException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
+        });
     log.info("Got authentication id (={})", authentication.getId());
 
     TokenInfo newTokenInfo = jwtUtil.generateAccessAndRefreshToken(userId);

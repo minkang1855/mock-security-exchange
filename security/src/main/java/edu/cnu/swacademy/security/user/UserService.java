@@ -15,7 +15,7 @@ public class UserService {
 
   private final UserRepository userRepository;
 
-  @Transactional
+  @Transactional(rollbackFor = Exception.class)
   public UserSignupResponse signup(UserSignupRequest request) throws Exception {
     if (userRepository.existsByEmail(request.userEmail())) {
       throw new SecurityException(ErrorCode.EMAIL_ALREADY_EXISTS);
