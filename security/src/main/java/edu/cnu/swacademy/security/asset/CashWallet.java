@@ -64,4 +64,8 @@ public class CashWallet extends BaseEntity {
   public void block() {
     this.isBlocked = true;
   }
+
+  public void unblock() {
+    this.isBlocked = false;
+  }
 }

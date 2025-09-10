@@ -72,4 +72,11 @@ public class CashWalletController {
   ) throws SecurityException {
     cashWalletService.blockCashWallet(cashWalletId);
   }
+
+  @PostMapping("/{cash-wallet-id}/unblock")
+  public void unblockCashWallet(
+      @PathVariable("cash-wallet-id") int cashWalletId
+  ) throws SecurityException {
+    cashWalletService.unblockCashWallet(cashWalletId);
+  }
 }

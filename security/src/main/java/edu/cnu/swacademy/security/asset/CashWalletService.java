@@ -266,4 +266,42 @@ public class CashWalletService {
 
     log.info("Cash wallet blocked successfully: cash-wallet-id(={})", cashWallet.getId());
   }
+
+  /**
+   * 현금 계좌 정지 해제
+   * 정지 상태로 잠겨 있던 현금 지갑을 정상 상태로 되돌려, 다시 입금/출금 및 주문 접수가 가능하도록 허용합니다.
+   * 
+   * @param cashWalletId 현금 지갑 ID
+   * @throws SecurityException 해제 실패 시 발생 (계좌 없음, 이미 해제됨 등)
+   */
+  @Transactional(rollbackFor = Exception.class)
+  public void unblockCashWallet(int cashWalletId) throws SecurityException {
+    // 1. 현금 계좌 조회
+    CashWallet cashWallet = cashWalletRepository.findById(cashWalletId)
+        .orElseThrow(() -> {
+          log.info("Cash wallet not found for id(={})", cashWalletId);
+          return new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND);
+        });
+
+    // 2. 이미 정지 해제된 계좌인지 확인
+    if (!cashWallet.isBlocked()) {
+      log.info("Cash wallet is already unblocked for id(={})", cashWalletId);
+      throw new SecurityException(ErrorCode.CASH_WALLET_ALREADY_UNBLOCKED);
+    }
+
+    // 3. 계좌 정지 해제 처리
+    cashWallet.unblock();
+
+    // 4. 계좌 정지 해제 내역 생성 (거래 내역 기록)
+    CashWalletHistory history = new CashWalletHistory(
+        cashWallet,
+        TransactionType.ACCOUNT_UNBLOCKED,
+        0, // 해제 시에는 금액 변동 없음
+        "계좌 정지 해제",
+        cashWallet.getReserve()
+    );
+    cashWalletHistoryRepository.save(history);
+
+    log.info("Cash wallet unblocked successfully: cash-wallet-id(={})", cashWallet.getId());
+  }
 }
