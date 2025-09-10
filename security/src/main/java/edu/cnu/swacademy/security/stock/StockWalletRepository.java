@@ -5,11 +5,13 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface StockWalletRepository extends JpaRepository<StockWallet, Long> {
+public interface StockWalletRepository extends JpaRepository<StockWallet, Integer> {
 
-  List<StockWallet> findByUserId(Long userId);
+  List<StockWallet> findByUserId(int userId);
 
-  Optional<StockWallet> findByUserIdAndStockId(Long userId, Long stockId);
+  Optional<StockWallet> findByUserIdAndStockId(int userId, int stockId);
 
-  List<StockWallet> findByStockId(Long stockId);
+  List<StockWallet> findByStockId(int stockId);
+
+  boolean existsByUserIdAndStockId(int userId, int stockId);
 }

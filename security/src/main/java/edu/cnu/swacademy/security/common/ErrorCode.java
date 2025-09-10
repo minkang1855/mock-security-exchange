@@ -15,11 +15,14 @@ public enum ErrorCode {
   USER_NOT_FOUND("404", "User not found."),
   REFRESH_TOKEN_NOT_FOUND("404", "Refresh token not found."),
   CASH_WALLET_NOT_FOUND("404", "Cash wallet not found."),
+  STOCK_NOT_FOUND("404", "Stock not found."),
+  STOCK_WALLET_NOT_FOUND("404", "Stock wallet not found."),
 
   EMAIL_ALREADY_EXISTS("409", "Email already exists."),
   CASH_WALLET_ALREADY_EXISTS("409", "Cash wallet already exists."),
   CASH_WALLET_ALREADY_BLOCKED("409", "Cash wallet is already blocked."),
   CASH_WALLET_ALREADY_UNBLOCKED("409", "Cash wallet is already unblocked."),
+  STOCK_WALLET_ALREADY_EXISTS("409", "Stock wallet already exists."),
 
   CASH_WALLET_BLOCKED("412", "Cash wallet is blocked."),
   INSUFFICIENT_BALANCE("428", "Insufficient balance."),

@@ -1,5 +1,8 @@
 package edu.cnu.swacademy.security.stock;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
 import edu.cnu.swacademy.security.common.BaseEntity;
 import edu.cnu.swacademy.security.user.User;
 import jakarta.persistence.Column;
@@ -14,8 +17,6 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @AllArgsConstructor
@@ -40,11 +41,19 @@ public class StockWallet extends BaseEntity {
   private Stock stock;
 
   @Column(nullable = false, columnDefinition = "INT UNSIGNED DEFAULT 0")
-  private int reserve = 0;
+  private int reserve;
 
   @Column(nullable = false, columnDefinition = "INT UNSIGNED DEFAULT 0")
-  private int deposit = 0;
+  private int deposit;
 
   @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
-  private boolean isBlocked = false;
+  private boolean isBlocked;
+
+  public StockWallet(User user, Stock stock) {
+    this.user = user;
+    this.stock = stock;
+    this.reserve = 0;
+    this.deposit = 0;
+    this.isBlocked = false;
+  }
 }
