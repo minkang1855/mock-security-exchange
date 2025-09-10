@@ -49,4 +49,8 @@ public class CashWallet extends BaseEntity {
     this.user = user;
     this.accountNumber = accountNumber;
   }
+
+  public void deposit(long amount) {
+    this.reserve += amount;
+  }
 }

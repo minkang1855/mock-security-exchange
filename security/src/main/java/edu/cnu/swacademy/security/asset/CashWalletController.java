@@ -1,11 +1,14 @@
 package edu.cnu.swacademy.security.asset;
 
+import edu.cnu.swacademy.security.asset.dto.CashDepositRequest;
 import edu.cnu.swacademy.security.common.SecurityException;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -19,5 +22,11 @@ public class CashWalletController {
   public void createCashWallet(HttpServletRequest request) throws SecurityException {
     Long userId = (Long) request.getAttribute("user_id");
     cashWalletService.createCashWallet(userId);
+  }
+
+  @PostMapping("/deposit")
+  public void deposit(HttpServletRequest request, @Valid @RequestBody CashDepositRequest depositRequest) throws SecurityException {
+    Long userId = (Long) request.getAttribute("user_id");
+    cashWalletService.deposit(userId, depositRequest);
   }
 }

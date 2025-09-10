@@ -14,11 +14,12 @@ public enum ErrorCode {
 
   USER_NOT_FOUND("404", "User not found."),
   REFRESH_TOKEN_NOT_FOUND("404", "Refresh token not found."),
+  CASH_WALLET_NOT_FOUND("404", "Cash wallet not found."),
 
   EMAIL_ALREADY_EXISTS("409", "Email already exists."),
   WALLET_ALREADY_EXISTS("409", "Wallet already exists."),
 
-  WALLET_BLOCKED("412", "Wallet is blocked."),
+  CASH_WALLET_BLOCKED("412", "Cash wallet is blocked."),
 
   PASSWORD_HASHING_FAILED("500", "Password hashing failed."),
   JWT_TOKEN_PARSE_FAILED("500", "JWT token parse failed."),

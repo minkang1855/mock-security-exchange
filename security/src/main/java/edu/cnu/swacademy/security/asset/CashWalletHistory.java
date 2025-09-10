@@ -3,6 +3,8 @@ package edu.cnu.swacademy.security.asset;
 import edu.cnu.swacademy.security.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,7 +12,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
@@ -18,7 +19,6 @@ import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
-@AllArgsConstructor
 @SQLRestriction("deleted_at IS NULL")
 @SQLDelete(sql = "UPDATE cash_wallet_history SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Table(name = "cash_wallet_history")
@@ -34,8 +34,9 @@ public class CashWalletHistory extends BaseEntity {
   @JoinColumn(nullable = false)
   private CashWallet cashWallet;
 
+  @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
-  private String txType;
+  private TransactionType txType;
 
   @Column(nullable = false)
   private long txAmount;
@@ -45,4 +46,12 @@ public class CashWalletHistory extends BaseEntity {
 
   @Column(nullable = false, columnDefinition = "BIGINT UNSIGNED")
   private long reserve;
+
+  public CashWalletHistory(CashWallet cashWallet, TransactionType txType, long txAmount, String txNote, long reserve) {
+    this.cashWallet = cashWallet;
+    this.txType = txType;
+    this.txAmount = txAmount;
+    this.txNote = txNote;
+    this.reserve = reserve;
+  }
 }
