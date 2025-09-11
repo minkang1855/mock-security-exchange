@@ -134,7 +134,7 @@ public class PriceCalculationService {
   
   /**
    * 상한가 계산
-   * 상한가 = 기준가 × (105%)
+   * 상한가 = 기준가 × (1.05%)
    * 
    * @param referencePrice 기준가
    * @return 상한가 (틱 사이즈에 맞게 조정됨)
@@ -149,7 +149,7 @@ public class PriceCalculationService {
   
   /**
    * 하한가 계산
-   * 하한가 = 기준가 × (95%)
+   * 하한가 = 기준가 × (0.95%)
    * 
    * @param referencePrice 기준가
    * @return 하한가 (틱 사이즈에 맞게 조정됨)
