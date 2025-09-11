@@ -25,6 +25,8 @@ public enum ErrorCode {
   STOCK_WALLET_ALREADY_EXISTS("409", "Stock wallet already exists."),
   STOCK_WALLET_ALREADY_BLOCKED("409", "Stock wallet is already blocked."),
   STOCK_WALLET_ALREADY_UNBLOCKED("409", "Stock wallet is already unblocked."),
+  MARKET_ALREADY_OPEN("409", "Market is already open."),
+  MARKET_ALREADY_CLOSED("409", "Market is already closed."),
 
   CASH_WALLET_BLOCKED("412", "Cash wallet is blocked."),
   STOCK_WALLET_BLOCKED("412", "Stock wallet is blocked."),
@@ -36,7 +38,8 @@ public enum ErrorCode {
   JWT_TOKEN_PARSE_FAILED("500", "JWT token parse failed."),
   ENCRYPTION_FAILED("500", "Encryption failed."),
   DECRYPTION_FAILED("500", "Decryption failed."),
-  ACCOUNT_NUMBER_GENERATION_FAILED("500", "Failed to generate unique account number.");
+  ACCOUNT_NUMBER_GENERATION_FAILED("500", "Failed to generate unique account number."),
+  EXCHANGE_SERVER_START_FAILED("500", "Failed to start exchange server.");
 
   private final String code;
   private final String message;
