@@ -28,7 +28,7 @@ public class StockWalletService {
    * 
    * @param userId 사용자 ID (JWT에서 추출된 값)
    * @param request 증권 계좌 개설 요청 (stockId 포함)
-   * @throws SecurityException 개설 실패 시 발생 (종목 없음, 이미 존재함 등)
+   * @throws SecurityException 개설 실패 시 발생 (종목 없음, 이미 존재함)
    */
   @Transactional(rollbackFor = Exception.class)
   public void createStockWallet(int userId, StockWalletRequest request) throws SecurityException {
@@ -102,17 +102,17 @@ public class StockWalletService {
   }
 
   /**
-   * 증권 지갑 잔고 조회
-   * 사용자가 보유한 특정 종목의 증권지갑 상태를 확인하여, 실제 보유하고 있는 잔고(reserve), 
+   * 증권 계좌 잔고 조회
+   * 사용자가 보유한 특정 종목의 증권계좌 상태를 확인하여, 실제 보유하고 있는 잔고(reserve),
    * 매도 주문에 묶여 있는 증거량(deposit), 그리고 매도 가능 잔고(available = reserve - deposit)를 조회합니다.
    * 
    * @param userId 사용자 ID (JWT에서 추출된 값)
    * @param stockId 종목 ID
-   * @return 증권 지갑 잔고 정보
-   * @throws SecurityException 조회 실패 시 발생 (지갑 없음 등)
+   * @return 증권 계좌 잔고 정보
+   * @throws SecurityException 조회 실패 시 발생 (종목 계좌 없음)
    */
   public StockBalanceResponse getBalance(int userId, int stockId) throws SecurityException {
-    // 1. 사용자의 특정 종목 증권 지갑 조회
+    // 1. 사용자의 특정 종목 증권 계좌 조회
     StockWallet stockWallet = stockWalletRepository.findByUserIdAndStockId(userId, stockId)
         .orElseThrow(() -> {
           log.info("Stock wallet not found for user-id(={}), stock-id(={})", userId, stockId);

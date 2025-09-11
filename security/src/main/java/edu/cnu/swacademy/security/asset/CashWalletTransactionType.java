@@ -1,9 +1,11 @@
 package edu.cnu.swacademy.security.asset;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @Getter
-public enum TransactionType {
+@RequiredArgsConstructor
+public enum CashWalletTransactionType {
   DEPOSIT("입금"),
   WITHDRAWAL("출금"),
   TRADE_PAYMENT("거래 대금 지급(거래 출금)"),
@@ -13,8 +15,4 @@ public enum TransactionType {
   ACCOUNT_UNBLOCKED("계좌 정지 해제");
 
   private final String description;
-
-  TransactionType(String description) {
-    this.description = description;
-  }
 }

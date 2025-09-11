@@ -1,8 +1,10 @@
 package edu.cnu.swacademy.security.stock;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @Getter
+@RequiredArgsConstructor
 public enum StockWalletTransactionType {
   DEPOSIT("입고"),
   TRADE_PAYMENT("거래 대금 지급(거래 출금)"),
@@ -12,8 +14,4 @@ public enum StockWalletTransactionType {
   ACCOUNT_UNBLOCKED("계좌 정지 해제");
 
   private final String description;
-
-  StockWalletTransactionType(String description) {
-    this.description = description;
-  }
 }

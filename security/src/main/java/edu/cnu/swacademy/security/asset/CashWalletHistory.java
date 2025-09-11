@@ -36,7 +36,7 @@ public class CashWalletHistory extends BaseEntity {
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
-  private TransactionType txType;
+  private CashWalletTransactionType txType;
 
   @Column(nullable = false)
   private int txAmount;
@@ -47,7 +47,7 @@ public class CashWalletHistory extends BaseEntity {
   @Column(nullable = false, columnDefinition = "BIGINT UNSIGNED")
   private int reserve;
 
-  public CashWalletHistory(CashWallet cashWallet, TransactionType txType, int txAmount, String txNote, int reserve) {
+  public CashWalletHistory(CashWallet cashWallet, CashWalletTransactionType txType, int txAmount, String txNote, int reserve) {
     this.cashWallet = cashWallet;
     this.txType = txType;
     this.txAmount = txAmount;

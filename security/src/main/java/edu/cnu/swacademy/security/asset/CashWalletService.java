@@ -82,7 +82,7 @@ public class CashWalletService {
           return new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND);
         });
 
-    // 2. 지갑 정지 상태 확인
+    // 2. 현금 계좌 정지 상태 확인
     if (cashWallet.isBlocked()) {
       log.info("Cash wallet is blocked for user-id(={})", userId);
       throw new SecurityException(ErrorCode.CASH_WALLET_BLOCKED);
@@ -94,7 +94,7 @@ public class CashWalletService {
     // 4. 거래 내역 생성
     CashWalletHistory history = new CashWalletHistory(
         cashWallet,
-        TransactionType.DEPOSIT,
+        CashWalletTransactionType.DEPOSIT,
         request.amount(),
         "현금 입금",
         cashWallet.getReserve()
@@ -106,7 +106,7 @@ public class CashWalletService {
 
   /**
    * 현금 출금 처리
-   * 사용자가 요청한 금액만큼 현금 지갑의 예치금을 차감하고 출금 내역을 기록합니다.
+   * 사용자가 요청한 금액만큼 현금 계좌의 예치금을 차감하고 출금 내역을 기록합니다.
    * 동시성 이슈를 방지하기 위해 비관적 락을 사용하여 계좌를 조회합니다.
    * 
    * @param userId 사용자 ID (JWT에서 추출된 값)
@@ -122,7 +122,7 @@ public class CashWalletService {
           return new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND);
         });
 
-    // 2. 지갑 정지 상태 확인 (정지된 계좌는 출금 불가)
+    // 2. 현금 계좌 정지 상태 확인 (정지된 계좌는 출금 불가)
     if (cashWallet.isBlocked()) {
       log.info("Cash wallet is blocked for user-id(={})", userId);
       throw new SecurityException(ErrorCode.CASH_WALLET_BLOCKED);
@@ -143,7 +143,7 @@ public class CashWalletService {
     // 5. 출금 내역 생성 (거래 내역 기록)
     CashWalletHistory history = new CashWalletHistory(
         cashWallet,
-        TransactionType.WITHDRAWAL,
+        CashWalletTransactionType.WITHDRAWAL,
         withdrawalAmount,
         "현금 출금",
         cashWallet.getReserve()
@@ -155,11 +155,11 @@ public class CashWalletService {
 
   /**
    * 현금 잔액 조회
-   * 사용자의 현금 지갑 상태를 확인하여 예치금, 대기중인 매수 주문으로 묶인 금액, 
+   * 사용자의 현금 계좌 상태를 확인하여 예치금, 대기중인 매수 주문으로 묶인 금액,
    * 그리고 실제 출금 가능 금액을 조회합니다.
    * 
    * @param userId 사용자 ID (JWT에서 추출된 값)
-   * @return 현금 잔액 정보 (지갑 ID, 예치금, 묶인 금액, 출금 가능 금액)
+   * @return 현금 잔액 정보 (현금 계좌 ID, 예치금, 묶인 금액, 출금 가능 금액)
    * @throws SecurityException 조회 실패 시 발생 (계좌 없음, 정지 상태 등)
    */
   public CashBalanceResponse getBalance(int userId) throws SecurityException {
@@ -170,7 +170,7 @@ public class CashWalletService {
           return new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND);
         });
 
-    // 2. 지갑 정지 상태 확인 (정지된 계좌는 조회 불가)
+    // 2. 계좌 정지 상태 확인 (정지된 계좌는 조회 불가)
     if (cashWallet.isBlocked()) {
       log.info("Cash wallet is blocked for id(={})", cashWallet.getId());
       throw new SecurityException(ErrorCode.CASH_WALLET_BLOCKED);
@@ -189,7 +189,7 @@ public class CashWalletService {
 
   /**
    * 현금 입출금 내역 조회
-   * 사용자의 현금 지갑 내역을 페이지 단위로 조회합니다.
+   * 사용자의 현금 계좌 내역을 페이지 단위로 조회합니다.
    * 
    * @param userId 사용자 ID (JWT에서 추출된 값)
    * @param pageable 페이지네이션 정보 (기본값: size=10, page=0, sort=createdAt DESC)
@@ -197,8 +197,8 @@ public class CashWalletService {
    * @throws SecurityException 조회 실패 시 발생 (계좌 정지 상태)
    */
   public CashWalletHistoriesResponse getHistories(int userId, Pageable pageable) throws SecurityException {
-    // 1. 현금 지갑 내역 조회 (입금/출금만 조회, 정지되지 않은 지갑만)
-    List<TransactionType> depositAndWithdrawalTypes = Arrays.asList(TransactionType.DEPOSIT, TransactionType.WITHDRAWAL);
+    // 1. 현금 계좌 내역 조회 (입금/출금만 조회, 정지되지 않은 계좌만)
+    List<CashWalletTransactionType> depositAndWithdrawalTypes = Arrays.asList(CashWalletTransactionType.DEPOSIT, CashWalletTransactionType.WITHDRAWAL);
     Page<CashWalletHistory> historyPage = cashWalletHistoryRepository.findByUserIdAndTxTypeInAndWalletNotBlocked(
         userId, depositAndWithdrawalTypes, pageable);
 
@@ -225,10 +225,10 @@ public class CashWalletService {
 
   /**
    * 현금 계좌 정지
-   * 사용자의 현금 지갑을 정지하여 모든 현금 관련 거래를 차단합니다.
+   * 사용자의 현금 계좌을 정지하여 모든 현금 관련 거래를 차단합니다.
    * 
-   * @param userId 사용자 ID (JWT에서 추출된 값)
-   * @throws SecurityException 정지 실패 시 발생 (계좌 없음, 이미 정지됨 등)
+   * @param cashWalletId 현금 계좌 ID (PathVariable로 받은 값)
+   * @throws SecurityException 정지 실패 시 발생 (현금 계좌 없음, 이미 정지됨)
    */
   @Transactional(rollbackFor = Exception.class)
   public void blockCashWallet(int cashWalletId) throws SecurityException {
@@ -248,10 +248,10 @@ public class CashWalletService {
     // 3. 계좌 정지 처리
     cashWallet.block();
 
-    // 4. 계좌 정지 내역 생성 (거래 내역 기록)
+    // 4. 계좌 정지 내역 생성 (변경 내역 기록)
     CashWalletHistory history = new CashWalletHistory(
         cashWallet,
-        TransactionType.ACCOUNT_BLOCKED,
+        CashWalletTransactionType.ACCOUNT_BLOCKED,
         0, // 정지 시에는 금액 변동 없음
         "계좌 정지",
         cashWallet.getReserve()
@@ -263,9 +263,9 @@ public class CashWalletService {
 
   /**
    * 현금 계좌 정지 해제
-   * 정지 상태로 잠겨 있던 현금 지갑을 정상 상태로 되돌려, 다시 입금/출금 및 주문 접수가 가능하도록 허용합니다.
+   * 정지 상태로 잠겨 있던 현금 계좌를 정상 상태로 되돌려, 다시 입금/출금 및 주문 접수가 가능하도록 허용합니다.
    * 
-   * @param cashWalletId 현금 지갑 ID
+   * @param cashWalletId 현금 계좌 ID
    * @throws SecurityException 해제 실패 시 발생 (계좌 없음, 이미 해제됨 등)
    */
   @Transactional(rollbackFor = Exception.class)
@@ -286,10 +286,10 @@ public class CashWalletService {
     // 3. 계좌 정지 해제 처리
     cashWallet.unblock();
 
-    // 4. 계좌 정지 해제 내역 생성 (거래 내역 기록)
+    // 4. 계좌 정지 해제 내역 생성 (변경 내역 기록)
     CashWalletHistory history = new CashWalletHistory(
         cashWallet,
-        TransactionType.ACCOUNT_UNBLOCKED,
+        CashWalletTransactionType.ACCOUNT_UNBLOCKED,
         0, // 해제 시에는 금액 변동 없음
         "계좌 정지 해제",
         cashWallet.getReserve()

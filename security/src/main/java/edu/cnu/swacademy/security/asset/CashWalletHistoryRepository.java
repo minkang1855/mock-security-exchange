@@ -16,7 +16,7 @@ public interface CashWalletHistoryRepository extends JpaRepository<CashWalletHis
          "AND cwh.txType IN :txTypes")
   Page<CashWalletHistory> findByUserIdAndTxTypeInAndWalletNotBlocked(
       int userId,
-      List<TransactionType> txTypes,
+      List<CashWalletTransactionType> txTypes,
       Pageable pageable
   );
 }
