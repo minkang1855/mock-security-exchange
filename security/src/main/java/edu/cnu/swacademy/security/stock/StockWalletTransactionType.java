@@ -6,10 +6,12 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum StockWalletTransactionType {
+  
   DEPOSIT("입고"),
-  TRADE_PAYMENT("거래 대금 지급(거래 출금)"),
-  TRADE_RECEIPT("거래 대금 수령(거래 입금)"),
-  TRADE_REFUND("거래 대금 반환(주문 취소)"),
+  SELL_ORDER("판매 주문 (매도 수량 설정)"),
+  SELL_ORDER_CANCEL("판매 주문 취소 (매도 수량 해제)"),
+  BUY_ORDER_EXECUTED("구매 주문 체결"),
+  SELL_ORDER_EXECUTED("판매 주문 체결"),
   ACCOUNT_BLOCKED("계좌 정지"),
   ACCOUNT_UNBLOCKED("계좌 정지 해제");
 
