@@ -66,16 +66,16 @@ public class CashWalletController {
     return cashWalletService.getHistories(userId, pageable);
   }
 
-  @PostMapping("/{cash-wallet-id}/block")
+  @PostMapping("/{cash_wallet_id}/block")
   public void blockCashWallet(
-      @PathVariable("cash-wallet-id") int cashWalletId
+      @PathVariable("cash_wallet_id") int cashWalletId
   ) throws SecurityException {
     cashWalletService.blockCashWallet(cashWalletId);
   }
 
-  @PostMapping("/{cash-wallet-id}/unblock")
+  @PostMapping("/{cash_wallet_id}/unblock")
   public void unblockCashWallet(
-      @PathVariable("cash-wallet-id") int cashWalletId
+      @PathVariable("cash_wallet_id") int cashWalletId
   ) throws SecurityException {
     cashWalletService.unblockCashWallet(cashWalletId);
   }

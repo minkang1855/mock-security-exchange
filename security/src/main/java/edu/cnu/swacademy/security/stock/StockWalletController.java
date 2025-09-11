@@ -29,10 +29,10 @@ public class StockWalletController {
     stockWalletService.createStockWallet(userId, stockWalletRequest);
   }
 
-  @GetMapping("/{stockId}/balance")
+  @GetMapping("/{stock_id}/balance")
   public StockBalanceResponse getBalance(
       HttpServletRequest request,
-      @PathVariable int stockId
+      @PathVariable("stock_id") int stockId
   ) throws SecurityException {
     int userId = (int) request.getAttribute("user_id");
     return stockWalletService.getBalance(userId, stockId);
