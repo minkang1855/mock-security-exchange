@@ -1,7 +1,8 @@
-package edu.cnu.swacademy.security.market;
+package edu.cnu.swacademy.security.order;
 
 import edu.cnu.swacademy.security.common.BaseEntity;
 import edu.cnu.swacademy.security.stock.Stock;
+import edu.cnu.swacademy.security.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -21,10 +22,10 @@ import org.hibernate.annotations.SQLRestriction;
 @AllArgsConstructor
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @SQLRestriction("deleted_at IS NULL")
-@SQLDelete(sql = "UPDATE match SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Table(name = "match")
+@SQLDelete(sql = "UPDATE `order` SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@Table(name = "order")
 @Entity
-public class Match extends BaseEntity {
+public class Order extends BaseEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,13 +34,24 @@ public class Match extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(nullable = false)
+  private User user;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(nullable = false)
   private Stock stock;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(nullable = false)
-  private Order makerOrder;
+  @Column(nullable = false, length = 4)
+  private String side;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(nullable = false)
-  private Order takerOrder;
+  @Column(nullable = false, columnDefinition = "INT UNSIGNED")
+  private int price;
+
+  @Column(nullable = false, columnDefinition = "INT UNSIGNED")
+  private int amount;
+
+  @Column(nullable = false, columnDefinition = "INT UNSIGNED")
+  private int unfilledAmount;
+
+  @Column(nullable = false, columnDefinition = "INT UNSIGNED DEFAULT 0")
+  private int canceledAmount = 0;
 }
