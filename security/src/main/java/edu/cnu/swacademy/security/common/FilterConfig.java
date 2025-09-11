@@ -20,7 +20,9 @@ public class FilterConfig {
     registrationBean.addUrlPatterns("/api/v1/cash-wallet/balance");
     registrationBean.addUrlPatterns("/api/v1/cash-wallet/histories");
 
-    registrationBean.addUrlPatterns("/api/v1/stock-wallet/*");
+    registrationBean.addUrlPatterns("/api/v1/stock-wallet");
+    registrationBean.addUrlPatterns("/api/v1/stock-wallet/balance/*");
+
     registrationBean.addUrlPatterns("/api/v1/order/*");
     registrationBean.addUrlPatterns("/api/v1/orderbook/*");
     

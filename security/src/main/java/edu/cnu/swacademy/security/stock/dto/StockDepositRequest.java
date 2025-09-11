@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Min;
 
 public record StockDepositRequest(
     @Min(value = 1)
-    int stockId,
+    int stockWalletId,
 
     @Min(value = 1)
     int amount
