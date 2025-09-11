@@ -10,14 +10,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @SQLRestriction("deleted_at IS NULL")
 @SQLDelete(sql = "UPDATE stock_wallet_history SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
@@ -35,7 +33,7 @@ public class StockWalletHistory extends BaseEntity {
   private StockWallet stockWallet;
 
   @Column(nullable = false, length = 20)
-  private String txType;
+  private StockWalletTransactionType txType;
 
   @Column(nullable = false, columnDefinition = "INT UNSIGNED")
   private int txAmount;
@@ -45,4 +43,12 @@ public class StockWalletHistory extends BaseEntity {
 
   @Column(nullable = false, columnDefinition = "INT UNSIGNED")
   private int reserve;
+
+  public StockWalletHistory(StockWallet stockWallet, StockWalletTransactionType txType, int txAmount, String txNote, int reserve) {
+    this.stockWallet = stockWallet;
+    this.txType = txType;
+    this.txAmount = txAmount;
+    this.txNote = txNote;
+    this.reserve = reserve;
+  }
 }

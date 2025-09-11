@@ -1,8 +1,9 @@
 package edu.cnu.swacademy.security.stock;
 
-import edu.cnu.swacademy.security.stock.dto.StockBalanceResponse;
-import edu.cnu.swacademy.security.stock.dto.StockWalletRequest;
 import edu.cnu.swacademy.security.common.SecurityException;
+import edu.cnu.swacademy.security.stock.dto.StockBalanceResponse;
+import edu.cnu.swacademy.security.stock.dto.StockDepositRequest;
+import edu.cnu.swacademy.security.stock.dto.StockWalletRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,16 @@ public class StockWalletController {
   ) throws SecurityException {
     int userId = (int) request.getAttribute("user_id");
     stockWalletService.createStockWallet(userId, stockWalletRequest);
+  }
+
+  @PostMapping("/{stock_id}/deposit")
+  public void deposit(
+      HttpServletRequest request,
+      @PathVariable("stock_id") int stockId,
+      @Valid @RequestBody StockDepositRequest depositRequest
+  ) throws SecurityException {
+    int userId = (int) request.getAttribute("user_id");
+    stockWalletService.deposit(userId, stockId, depositRequest);
   }
 
   @GetMapping("/{stock_id}/balance")

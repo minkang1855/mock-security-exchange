@@ -1,16 +1,16 @@
 package edu.cnu.swacademy.security.stock;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import edu.cnu.swacademy.security.common.ErrorCode;
 import edu.cnu.swacademy.security.common.SecurityException;
 import edu.cnu.swacademy.security.stock.dto.StockBalanceResponse;
+import edu.cnu.swacademy.security.stock.dto.StockDepositRequest;
 import edu.cnu.swacademy.security.stock.dto.StockWalletRequest;
 import edu.cnu.swacademy.security.user.User;
 import edu.cnu.swacademy.security.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 public class StockWalletService {
 
   private final StockWalletRepository stockWalletRepository;
+  private final StockWalletHistoryRepository stockWalletHistoryRepository;
   private final StockRepository stockRepository;
   private final UserRepository userRepository;
 
@@ -57,6 +58,47 @@ public class StockWalletService {
 
     log.info("Stock wallet created successfully: user-id(={}), stock-id(={}), stock-wallet-id(={})",
         userId, request.stockId(), stockWallet.getId());
+  }
+
+  /**
+   * 증권 입고
+   * 입고 수량만큼 사용자의 증권 계좌의 보유 잔고를 증가시킵니다.
+   *
+   * @param userId 사용자 ID (JWT에서 추출된 값)
+   * @param stockId 종목 ID
+   * @param request 증권 입고 요청 (amount 포함)
+   * @throws SecurityException 입고 실패 시 발생 (종목 계좌 없음, 정지됨)
+   */
+  @Transactional(rollbackFor = Exception.class)
+  public void deposit(int userId, int stockId, StockDepositRequest request) throws SecurityException {
+    // 1. 사용자의 특정 종목 증권 계좌 조회
+    StockWallet stockWallet = stockWalletRepository.findByUserIdAndStockId(userId, stockId)
+        .orElseThrow(() -> {
+          log.info("Stock wallet not found for user-id(={}), stock-id(={})", userId, stockId);
+          return new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND);
+        });
+
+    // 2. 종목 계좌 정지 상태 확인
+    if (stockWallet.isBlocked()) {
+      log.info("Stock wallet is blocked for id(={})", stockWallet.getId());
+      throw new SecurityException(ErrorCode.STOCK_WALLET_BLOCKED);
+    }
+
+    // 3. 증권 입고 처리
+    stockWallet.deposit(request.amount());
+
+    stockWalletHistoryRepository.save(
+        new StockWalletHistory(
+            stockWallet,
+            StockWalletTransactionType.DEPOSIT,
+            request.amount(),
+            "증권 입고",
+            stockWallet.getReserve()
+        )
+    );
+
+    log.info("Stock deposit completed: user-id(={}), stock-id(={}), stock-wallet-id(={})",
+        userId, stockId, stockWallet.getId());
   }
 
   /**
