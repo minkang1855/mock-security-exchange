@@ -135,4 +135,81 @@ public class StockWalletService {
         available
     );
   }
+
+  /**
+   * 종목 계좌 정지
+   * 사용자의 종목 계좌을 정지하여 모든 종목 관련 거래를 차단합니다.
+   *
+   * @param stockWalletId 종목 계좌 ID (PathVariable로 받은 값)
+   * @throws SecurityException 정지 실패 시 발생 (종목 계좌 없음, 이미 정지됨)
+   */
+  @Transactional(rollbackFor = Exception.class)
+  public void blockStockWallet(int stockWalletId) throws SecurityException {
+    // 1. 사용자의 종목 계좌 조회
+    StockWallet stockWallet = stockWalletRepository.findById(stockWalletId)
+        .orElseThrow(() -> {
+          log.info("Stock wallet not found for id(={})", stockWalletId);
+          return new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND);
+        });
+
+    // 2. 이미 정지된 계좌인지 확인
+    if (stockWallet.isBlocked()) {
+      log.info("Stock wallet is already blocked for id(={})", stockWalletId);
+      throw new SecurityException(ErrorCode.STOCK_WALLET_ALREADY_BLOCKED);
+    }
+
+    // 3. 종목 계좌 정지 처리
+    stockWallet.block();
+
+    // 4. 계좌 정지 내역 생성 (변경 내역 기록)
+
+    StockWalletHistory history = new StockWalletHistory(
+        stockWallet,
+        StockWalletTransactionType.ACCOUNT_BLOCKED,
+        0, // 정지 시에는 금액 변동 없음
+        "계좌 정지",
+        stockWallet.getReserve()
+    );
+    stockWalletHistoryRepository.save(history);
+
+    log.info("Stock wallet blocked successfully: stock-wallet-id(={})", stockWallet.getId());
+  }
+
+  /**
+   * 종목 계좌 정지 해제
+   * 정지 상태로 잠겨 있던 종목 계좌를 정상 상태로 되돌려, 다시 매도 주문 접수가 가능하도록 허용합니다.
+   *
+   * @param stockWalletId 종목 계좌 ID
+   * @throws SecurityException 해제 실패 시 발생 (종목 계좌 없음, 이미 해제됨)
+   */
+  @Transactional(rollbackFor = Exception.class)
+  public void unblockStockWallet(int stockWalletId) throws SecurityException {
+    // 1. 현금 계좌 조회
+    StockWallet stockWallet = stockWalletRepository.findById(stockWalletId)
+        .orElseThrow(() -> {
+          log.info("Stock wallet not found for id(={})", stockWalletId);
+          return new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND);
+        });
+
+    // 2. 이미 정지 해제된 계좌인지 확인
+    if (!stockWallet.isBlocked()) {
+      log.info("Stock wallet is already unblocked for id(={})", stockWallet.getId());
+      throw new SecurityException(ErrorCode.STOCK_WALLET_ALREADY_UNBLOCKED);
+    }
+
+    // 3. 계좌 정지 해제 처리
+    stockWallet.unblock();
+
+    // 4. 계좌 정지 해제 내역 생성 (변경 내역 기록)
+    StockWalletHistory history = new StockWalletHistory(
+        stockWallet,
+        StockWalletTransactionType.ACCOUNT_UNBLOCKED,
+        0, // 해제 시에는 금액 변동 없음
+        "계좌 정지 해제",
+        stockWallet.getReserve()
+    );
+    stockWalletHistoryRepository.save(history);
+
+    log.info("Cash wallet unblocked successfully: cash-wallet-id(={})", stockWallet.getId());
+  }
 }

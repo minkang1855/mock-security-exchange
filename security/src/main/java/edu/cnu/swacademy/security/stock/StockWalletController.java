@@ -48,4 +48,18 @@ public class StockWalletController {
     int userId = (int) request.getAttribute("user_id");
     return stockWalletService.getBalance(userId, stockId);
   }
+
+  @PostMapping("/{stock_wallet_id}/block")
+  public void blockStockWallet(
+      @PathVariable("stock_wallet_id") int stockWalletId
+  ) throws SecurityException {
+    stockWalletService.blockStockWallet(stockWalletId);
+  }
+
+  @PostMapping("/{stock_wallet_id}/unblock")
+  public void unblockStockWallet(
+      @PathVariable("stock_wallet_id") int stockWalletId
+  ) throws SecurityException {
+    stockWalletService.unblockStockWallet(stockWalletId);
+  }
 }

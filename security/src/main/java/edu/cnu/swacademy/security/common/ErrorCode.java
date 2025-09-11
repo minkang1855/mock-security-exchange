@@ -23,8 +23,12 @@ public enum ErrorCode {
   CASH_WALLET_ALREADY_BLOCKED("409", "Cash wallet is already blocked."),
   CASH_WALLET_ALREADY_UNBLOCKED("409", "Cash wallet is already unblocked."),
   STOCK_WALLET_ALREADY_EXISTS("409", "Stock wallet already exists."),
+  STOCK_WALLET_ALREADY_BLOCKED("409", "Stock wallet is already blocked."),
+  STOCK_WALLET_ALREADY_UNBLOCKED("409", "Stock wallet is already unblocked."),
 
   CASH_WALLET_BLOCKED("412", "Cash wallet is blocked."),
+  STOCK_WALLET_BLOCKED("412", "Stock wallet is blocked."),
+
   INSUFFICIENT_BALANCE("428", "Insufficient balance."),
 
   PASSWORD_HASHING_FAILED("500", "Password hashing failed."),
