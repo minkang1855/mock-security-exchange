@@ -31,6 +31,7 @@ public enum ErrorCode {
 
   INSUFFICIENT_BALANCE("428", "Insufficient balance."),
 
+  INTERNAL_SERVER_ERROR("500", "Internal server error."),
   PASSWORD_HASHING_FAILED("500", "Password hashing failed."),
   JWT_TOKEN_PARSE_FAILED("500", "JWT token parse failed."),
   ENCRYPTION_FAILED("500", "Encryption failed."),
