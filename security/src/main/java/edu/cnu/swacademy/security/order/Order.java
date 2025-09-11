@@ -57,5 +57,15 @@ public class Order extends BaseEntity {
   private int unfilledAmount;
 
   @Column(nullable = false, columnDefinition = "INT UNSIGNED DEFAULT 0")
-  private int canceledAmount = 0;
+  private int canceledAmount;
+
+  public Order(User user, Stock stock, OrderSide side, int price, int amount, int unfilledAmount) {
+    this.user = user;
+    this.stock = stock;
+    this.side = side;
+    this.price = price;
+    this.amount = amount;
+    this.unfilledAmount = unfilledAmount;
+    this.canceledAmount = 0;
+  }
 }

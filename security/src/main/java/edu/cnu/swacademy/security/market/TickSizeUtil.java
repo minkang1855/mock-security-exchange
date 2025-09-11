@@ -74,7 +74,7 @@ public class TickSizeUtil {
    * @param price 검증할 가격
    * @return 틱 사이즈에 맞으면 true, 아니면 false
    */
-  private static boolean isValidTickSize(BigDecimal price) {
+  public static boolean isValidTickSize(BigDecimal price) {
     BigDecimal tickSize = getTickSize(price);
     BigDecimal remainder = price.remainder(tickSize);
     return remainder.compareTo(BigDecimal.ZERO) == 0;

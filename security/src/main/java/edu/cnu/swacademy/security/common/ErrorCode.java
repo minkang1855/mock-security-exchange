@@ -31,6 +31,10 @@ public enum ErrorCode {
   CASH_WALLET_BLOCKED("412", "Cash wallet is blocked."),
   STOCK_WALLET_BLOCKED("412", "Stock wallet is blocked."),
 
+  INVALID_TICK_SIZE("416", "Invalid tick size."),
+  PRICE_OUT_OF_LIMITS("416", "Price is out of limits."),
+  MARKET_STATUS_NOT_FOUND("404", "Market status not found."),
+
   INSUFFICIENT_BALANCE("428", "Insufficient balance."),
 
   INTERNAL_SERVER_ERROR("500", "Internal server error."),

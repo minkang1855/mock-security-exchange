@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class MatchService {
 
-  private final MatchRepository matchRepository;
   private final OrderRepository orderRepository;
 
   /**

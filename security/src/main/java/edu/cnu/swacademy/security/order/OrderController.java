@@ -4,10 +4,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import edu.cnu.swacademy.security.common.SecurityException;
+import edu.cnu.swacademy.security.order.dto.OrderSubmitRequest;
+import edu.cnu.swacademy.security.order.dto.OrderSubmitResponse;
 import edu.cnu.swacademy.security.order.dto.UnfilledOrdersResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +25,26 @@ import lombok.extern.slf4j.Slf4j;
 public class OrderController {
 
   private final OrderService orderService;
+
+  /**
+   * 주문 접수
+   * 사용자가 특정 종목에 대해 매수/매도 주문을 접수합니다.
+   * 
+   * @param request HTTP 요청 (JWT 토큰에서 사용자 ID 추출)
+   * @param request 주문 접수 요청
+   * @return 주문 접수 응답
+   * @throws SecurityException 주문 접수 실패 시 발생
+   */
+  @PostMapping
+  public OrderSubmitResponse submitOrder(
+      HttpServletRequest request,
+      @RequestBody OrderSubmitRequest orderRequest
+  ) throws SecurityException {
+    // JWT에서 사용자 ID 추출
+    int userId = (int) request.getAttribute("user_id");
+
+    return orderService.submitOrder(userId, orderRequest);
+  }
 
   /**
    * 당일 미체결 주문 내역 조회

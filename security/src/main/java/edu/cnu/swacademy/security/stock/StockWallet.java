@@ -68,4 +68,12 @@ public class StockWallet extends BaseEntity {
   public void unblock() {
     this.isBlocked = false;
   }
+
+  public int getAvailable() {
+    return this.reserve - this.deposit;
+  }
+
+  public void updateSellOrder(int quantity) {
+    this.deposit += quantity;
+  }
 }
