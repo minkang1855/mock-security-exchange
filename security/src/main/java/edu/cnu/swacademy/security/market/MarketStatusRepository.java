@@ -1,16 +1,18 @@
 package edu.cnu.swacademy.security.market;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+/**
+ * MarketStatus 엔티티를 위한 JPA Repository
+ */
+@Repository
+public interface MarketStatusRepository extends JpaRepository<MarketStatus, Integer> {
 
-public interface MarketStatusRepository extends JpaRepository<MarketStatus, Long> {
+  Optional<MarketStatus> findByStockIdAndTradingDate(int stockId, LocalDate tradingDate);
 
-  List<MarketStatus> findByStockIdOrderByTradingDateDesc(Long stockId);
-
-  Optional<MarketStatus> findByStockIdAndTradingDate(Long stockId, LocalDate tradingDate);
-
-  List<MarketStatus> findByTradingDate(LocalDate tradingDate);
+  boolean existsByStockIdAndTradingDate(int stockId, LocalDate tradingDate);
 }

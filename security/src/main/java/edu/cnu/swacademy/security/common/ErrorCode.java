@@ -39,7 +39,8 @@ public enum ErrorCode {
   ENCRYPTION_FAILED("500", "Encryption failed."),
   DECRYPTION_FAILED("500", "Decryption failed."),
   ACCOUNT_NUMBER_GENERATION_FAILED("500", "Failed to generate unique account number."),
-  EXCHANGE_SERVER_START_FAILED("500", "Failed to start exchange server.");
+  EXCHANGE_SERVER_START_FAILED("500", "Failed to start exchange server."),
+  FAILED_CALCULATE_NEXT_PRICES("500", "Failed to calculate next prices.");
 
   private final String code;
   private final String message;

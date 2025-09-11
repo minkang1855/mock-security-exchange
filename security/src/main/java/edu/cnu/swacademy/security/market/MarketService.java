@@ -1,19 +1,32 @@
 package edu.cnu.swacademy.security.market;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
+import edu.cnu.swacademy.security.market.dto.PriceCalculationResult;
+import edu.cnu.swacademy.security.stock.Stock;
+import edu.cnu.swacademy.security.stock.StockRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import edu.cnu.swacademy.security.common.ErrorCode;
 import edu.cnu.swacademy.security.common.SecurityException;
+import edu.cnu.swacademy.security.market.dto.MarketCloseResponse;
 import edu.cnu.swacademy.security.market.dto.MarketOpenResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class MarketService {
+
+  private final PriceCalculationService priceCalculationService;
+  private final MarketStatusRepository marketStatusRepository;
+  private final StockRepository stockRepository;
 
   // 거래소 서버 프로세스 상태 관리
   private LocalDateTime openedAt;
@@ -41,7 +54,7 @@ public class MarketService {
   public MarketOpenResponse openMarket() throws SecurityException {
     // 1. 이미 개장된 상태인지 확인
     if (isMarketRunning()) {
-      log.info("Market is already running");
+      log.info("Market is already running.");
       throw new SecurityException(ErrorCode.MARKET_ALREADY_OPEN);
     }
 
@@ -53,7 +66,29 @@ public class MarketService {
 
     log.info("Market opened successfully at {}", openedAt);
 
-    return new MarketOpenResponse("RUNNING", openedAt);
+    return new MarketOpenResponse(EngineStatus.RUNNING, openedAt);
+  }
+
+  /**
+   * 장 종료
+   * 거래소 서버 프로세스를 종료하여 더 이상 새로운 주문을 받지 않도록 합니다.
+   * 종료 시점에 당일 거래 결과를 기반으로 다음 거래일의 기준가, 상한가, 하한가를 계산합니다.
+   * 
+   * @return 장 종료 응답 (엔진 상태, 개장 시각)
+   * @throws SecurityException 이미 종료된 경우 발생
+   */
+  public MarketCloseResponse closeMarket() throws SecurityException {
+    // 1. 거래소 서버 프로세스 종료
+    shutdownExchangeServer();
+
+    // 2. 당일 거래 결과 기반으로 모든 종목의 다음 거래일 기준가, 상한가, 하한가 계산 및 저장
+    LocalDateTime closedAt = LocalDateTime.now();
+    log.info("Market closed successfully at {}", closedAt);
+
+    LocalDate today = closedAt.toLocalDate();
+    priceCalculationService.createMarketStatus(today);
+
+    return new MarketCloseResponse(EngineStatus.STOPPED, openedAt);
   }
 
   /**

@@ -66,4 +66,18 @@ public class MarketStatus extends BaseEntity {
 
   @Column(columnDefinition = "BIGINT UNSIGNED")
   private long tradingAmount;
+
+  public MarketStatus(Stock stock, LocalDate tradingDate, int referencePrice, int upperLimitPrice, int lowerLimitPrice) {
+    this.stock = stock;
+    this.tradingDate = tradingDate;
+    this.referencePrice = referencePrice;
+    this.upperLimitPrice = upperLimitPrice;
+    this.lowerLimitPrice = lowerLimitPrice;
+    this.openingPrice = 0;
+    this.closingPrice = 0;
+    this.highestPrice = 0;
+    this.lowestPrice = 0;
+    this.tradingVolume = 0;
+    this.tradingAmount = 0;
+  }
 }
