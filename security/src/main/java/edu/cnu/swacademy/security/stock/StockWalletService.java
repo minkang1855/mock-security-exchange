@@ -65,16 +65,15 @@ public class StockWalletService {
    * 입고 수량만큼 사용자의 증권 계좌의 보유 잔고를 증가시킵니다.
    *
    * @param userId 사용자 ID (JWT에서 추출된 값)
-   * @param stockId 종목 ID
-   * @param request 증권 입고 요청 (amount 포함)
+   * @param request 증권 입고 요청 (종목 계좌 ID, amount 포함)
    * @throws SecurityException 입고 실패 시 발생 (종목 계좌 없음, 정지됨)
    */
   @Transactional(rollbackFor = Exception.class)
-  public void deposit(int userId, int stockId, StockDepositRequest request) throws SecurityException {
+  public void deposit(int userId, StockDepositRequest request) throws SecurityException {
     // 1. 사용자의 특정 종목 증권 계좌 조회
-    StockWallet stockWallet = stockWalletRepository.findByUserIdAndStockId(userId, stockId)
+    StockWallet stockWallet = stockWalletRepository.findByUserIdAndStockId(userId, request.stockId())
         .orElseThrow(() -> {
-          log.info("Stock wallet not found for user-id(={}), stock-id(={})", userId, stockId);
+          log.info("Stock wallet not found for user-id(={}), stock-id(={})", userId, request.stockId());
           return new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND);
         });
 
@@ -97,8 +96,7 @@ public class StockWalletService {
         )
     );
 
-    log.info("Stock deposit completed: user-id(={}), stock-id(={}), stock-wallet-id(={})",
-        userId, stockId, stockWallet.getId());
+    log.info("Stock deposit completed: stock-wallet-id(={})", stockWallet.getId());
   }
 
   /**
@@ -124,8 +122,7 @@ public class StockWalletService {
     int deposit = stockWallet.getDeposit();
     int available = reserve - deposit;
 
-    log.info("Stock wallet balance retrieved: user-id(={}), stock-id(={}), stock-wallet-id(={})",
-        userId, stockId, stockWallet.getId(), reserve, deposit, available);
+    log.info("Stock wallet balance retrieved: stock-wallet-id(={})", stockWallet.getId());
 
     return new StockBalanceResponse(
         stockWallet.getId(),

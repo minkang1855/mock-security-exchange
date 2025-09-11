@@ -30,14 +30,13 @@ public class StockWalletController {
     stockWalletService.createStockWallet(userId, stockWalletRequest);
   }
 
-  @PostMapping("/{stock_id}/deposit")
+  @PostMapping("/reserve")
   public void deposit(
       HttpServletRequest request,
-      @PathVariable("stock_id") int stockId,
       @Valid @RequestBody StockDepositRequest depositRequest
   ) throws SecurityException {
     int userId = (int) request.getAttribute("user_id");
-    stockWalletService.deposit(userId, stockId, depositRequest);
+    stockWalletService.deposit(userId, depositRequest);
   }
 
   @GetMapping("/{stock_id}/balance")
