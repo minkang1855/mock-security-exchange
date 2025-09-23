@@ -112,41 +112,67 @@ class SecurityExchangeUser(HttpUser):
         # 입출금 내역 조회
         self.get_authenticated("/api/v1/cash-wallet/histories")
 
-    # 개별 API 호출들 (높은 빈도)
-
-    # 현금 잔액 조회
+    # 미체결 주문 추가 시나리오 묶음
     @task
-    def cashBalance(self):
-        self.get_authenticated("/api/v1/cash-wallet/balance")
-
-    # 입출금 내역 조회
-    @task
-    def cashHistories(self):
-        self.get_authenticated("/api/v1/cash-wallet/histories")
-
-    # 현재 잔고 조회
-    @task
-    def stockBalance(self):
+    def unfilledOrderScenario(self):
+        # 현재 잔고 조회
         self.get_authenticated(f"/api/v1/stock-wallet/balance/{STOCK_ID}")
-
-    # 당일 미체결 주문 내역 조회
-    @task
-    def unfilledOrders(self):
+        # 오더북 조회
+        self.get_authenticated(f"/api/v1/orderbook/{STOCK_ID}")
+        # 주문 접수
+        price = generate_tick_price()
+        quantity = random.randint(1, 10)
+        side = random.choice(["buy", "sell"])
+        self.post_authenticated("/api/v1/order", {"stock_id": STOCK_ID, "side": side, "price": price, "quantity": quantity})
+        # 당일 미체결 주문 내역 조회
         self.get_authenticated("/api/v1/orders/unfilled")
 
-    # 체결 내역 조회
+    # 주문 체결 시나리오 묶음 (모든 주문이 체결되도록)
     @task
-    def matchHistory(self):
+    def orderExecutionScenario(self):
+        # 현재 잔고 조회
+        self.get_authenticated(f"/api/v1/stock-wallet/balance/{STOCK_ID}")
+        # 오더북 조회
+        self.get_authenticated(f"/api/v1/orderbook/{STOCK_ID}")
+        # 첫 번째 주문 접수 (매수)
+        price = generate_tick_price()
+        quantity = random.randint(1, 5)
+        self.post_authenticated("/api/v1/order", {"stock_id": STOCK_ID, "side": "buy", "price": price, "quantity": quantity})
+        # 두 번째 주문 접수 (매도 - 같은 가격으로 체결 유도)
+        self.post_authenticated("/api/v1/order", {"stock_id": STOCK_ID, "side": "sell", "price": price, "quantity": quantity})
+        # 당일 미체결 주문 내역 조회
+        self.get_authenticated("/api/v1/orders/unfilled")
+        # 체결 내역 조회
         self.get_authenticated("/api/v1/match")
 
-    # 현금 입금 (단일)
+    # 주문 부분 체결 시나리오 묶음 (부분만 체결되도록)
     @task
-    def cashDeposit(self):
-        amount = random.randint(100000, 1000000)
-        self.post_authenticated("/api/v1/cash-wallet/deposit", {"amount": amount})
+    def partialExecutionScenario(self):
+        # 현재 잔고 조회
+        self.get_authenticated(f"/api/v1/stock-wallet/balance/{STOCK_ID}")
+        # 오더북 조회
+        self.get_authenticated(f"/api/v1/orderbook/{STOCK_ID}")
+        # 첫 번째 주문 접수 (큰 수량)
+        price = generate_tick_price()
+        large_quantity = random.randint(10, 20)
+        self.post_authenticated("/api/v1/order", {"stock_id": STOCK_ID, "side": "buy", "price": price, "quantity": large_quantity})
+        # 두 번째 주문 접수 (작은 수량 - 부분 체결 유도)
+        small_quantity = random.randint(1, 3)
+        self.post_authenticated("/api/v1/order", {"stock_id": STOCK_ID, "side": "sell", "price": price, "quantity": small_quantity})
+        # 당일 미체결 주문 내역 조회
+        self.get_authenticated("/api/v1/orders/unfilled")
+        # 체결 내역 조회
+        self.get_authenticated("/api/v1/match")
 
-    # 현금 출금 (단일)
+    # 주문 취소 시나리오 묶음
     @task
-    def cashWithdrawal(self):
-        amount = random.randint(50000, 500000)
-        self.post_authenticated("/api/v1/cash-wallet/withdrawal", {"amount": amount})
+    def orderCancelScenario(self):
+        # 현재 잔고 조회
+        self.get_authenticated(f"/api/v1/stock-wallet/balance/{STOCK_ID}")
+        # 당일 미체결 주문 내역 조회
+        self.get_authenticated("/api/v1/orders/unfilled")
+        # 주문 접수 (취소용)
+        price = generate_tick_price()
+        quantity = random.randint(1, 5)
+        side = random.choice(["buy", "sell"])
+        self.post_authenticated("/api/v1/order", {"stock_id": STOCK_ID, "side": side, "price": price, "quantity": quantity})
