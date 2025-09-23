@@ -1,0 +1,55 @@
+services:
+  security-server:
+    build:
+      context: ./security                   # security 서버 이미지를 빌드할 때 사용할 빌드 컨텍스트(./security 디렉토리)
+      dockerfile: Dockerfile                # 위 컨텍스트 내에서 사용할 Dockerfile 파일명
+    container_name: security-server         # 컨테이너 이름 고정(네트워크/로그 확인 시 편리)
+    ports:
+      - "8080:8080"                         # 호스트 8080 → 컨테이너 8080 매핑(호스트에서 접근 가능하도록 외부 공개)
+    environment:
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}     # 런타임 환경변수(호스트의 .env 또는 쉘 변수에서 주입)
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}     # JWT 서명 키(민감정보: .env로 관리, Git에 커밋 금지)
+      AES_SECRET_KEY: ${AES_SECRET_KEY}     # AES 비밀키(민감정보)
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"                       # CPU 상한(참고: Swarm 보장. 로컬 compose는 --compatibility 권장)
+          memory: 1g                        # 메모리 상한 (동일)
+
+  exchange-server:
+    build:
+      context: ./exchange                   # exchange 서버 이미지를 빌드할 때 사용할 컨텍스트(./exchange)
+      dockerfile: Dockerfile                # 해당 컨텍스트 내 Dockerfile 사용
+    container_name: exchange-server         # 컨테이너 이름 고정
+    ports:
+      - "8081:8081"                         # 호스트 8081 → 컨테이너 8081 공개
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"                       # CPU 상한
+          memory: 1g                        # 메모리 상한
+
+  redis:
+    image: redis:7.4.5
+    container_name: redis-db
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  mysql:
+    image: mysql:8.4.6
+    container_name: mysql
+    ports:
+      - "3300:3306"
+    environment:
+      MYSQL_DATABASE: security
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local

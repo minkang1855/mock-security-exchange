@@ -1,7 +1,7 @@
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB_NAME:security}
+    url: jdbc:mysql://${MYSQL_HOST:mysql}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:security}?useSSL=false&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD}
 
@@ -27,7 +27,7 @@ exchange:
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}
-  access-token-expired-at: ${ACCESS_TOKEN_EXPIRED_AT:5}
+  access-token-expired-at: ${ACCESS_TOKEN_EXPIRED_AT:999999}
   refresh-token-expired-at: ${REFRESH_TOKEN_EXPIRED_AT:7}
 
 aes:

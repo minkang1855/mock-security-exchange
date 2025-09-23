@@ -45,7 +45,7 @@ public class CashWalletService {
         });
     log.info("Got user id (={})", userId);
 
-    if (cashWalletRepository.existsByUserId(userId)) {
+    if (cashWalletRepository.findByUserIdWithLock(userId).isPresent()) {
       log.info("Cash wallet already exists for user-id(={})", userId);
       throw new SecurityException(ErrorCode.CASH_WALLET_ALREADY_EXISTS);
     }
