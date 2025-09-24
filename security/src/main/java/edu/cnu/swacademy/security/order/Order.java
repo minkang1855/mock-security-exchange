@@ -23,7 +23,7 @@ import org.hibernate.annotations.SQLRestriction;
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @SQLRestriction("deleted_at IS NULL")
 @SQLDelete(sql = "UPDATE `order` SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@Table(name = "order")
+@Table(name = "`order`")
 @Entity
 public class Order extends BaseEntity {
 

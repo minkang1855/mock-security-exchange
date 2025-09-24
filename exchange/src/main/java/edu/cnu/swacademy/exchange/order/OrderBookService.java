@@ -1,5 +1,6 @@
 package edu.cnu.swacademy.exchange.order;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.cnu.swacademy.exchange.order.dto.MakerOrderResponse;
 import edu.cnu.swacademy.exchange.order.dto.OrderBookEntry;
 import edu.cnu.swacademy.exchange.order.dto.OrderCancelRequest;
@@ -11,10 +12,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.RedisListCommands;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -27,11 +30,13 @@ import java.util.stream.Collectors;
 public class OrderBookService {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     /**
      * 주문 처리
      * 새로운 주문을 오더북에 추가하고 매칭을 시도합니다.
      */
+    @Transactional(rollbackFor = Exception.class)
     public OrderProcessResponse processOrder(OrderProcessRequest request) {
         log.info("Processing order: order-id={}, product-id={}, side={}", request.orderId(), request.stockId(), request.side());
 
@@ -59,6 +64,7 @@ public class OrderBookService {
     /**
      * 주문 취소
      */
+    @Transactional(rollbackFor = Exception.class)
     public OrderCancelResponse cancelOrder(OrderCancelRequest request) {
         log.info("Cancelling order: orderId={}, stockId={}, side={}, price={}", 
             request.orderId(), request.stockId(), request.side(), request.price());
@@ -77,8 +83,8 @@ public class OrderBookService {
             // 2. 조회한 주문을 순회하면서 order_id가 동일한게 있는지 확인
             OrderBookEntry targetOrder = null;
             for (Object orderObj : orders) {
-                OrderBookEntry order = (OrderBookEntry) orderObj;
-                if (order.getOrderId() == request.orderId()) {
+                OrderBookEntry order = convertToOrderBookEntry(orderObj);
+                if (order != null && order.getOrderId() == request.orderId()) {
                     targetOrder = order;
                     break;
                 }
@@ -127,7 +133,7 @@ public class OrderBookService {
         // 반대편에 매칭되는 주문이 없음
         if (popFrontOrderAtPrice(request.stockId(), oppositeSide, request.price()) == null) {
             // 미체결 주문 추가
-            addToOrderBook(request);
+            addUnfilledOrderToBook(request, request.amount());
 
             // 반대편에 해당하는 Price, TotalUnit 제거
             removePriceFromOrderBook(request.stockId(), oppositeSide, request.price());
@@ -145,7 +151,7 @@ public class OrderBookService {
             // 더 이상 반대편에 매칭되는 주문이 없음
             if (frontOrder == null) {
                 // 주문 추가
-                addToOrderBook(request);
+                addUnfilledOrderToBook(request, remainingAmount);
 
                 // 반대편에 해당하는 Price, TotalUnit 제거
                 removePriceFromOrderBook(request.stockId(), oppositeSide, request.price());
@@ -208,6 +214,7 @@ public class OrderBookService {
     private OrderBookEntry popFrontOrderAtPrice(int stockId, String side, int price) {
         String orderKey = getOrderKey(stockId, side, price);
         Object frontOrder = redisTemplate.opsForList().leftPop(orderKey);
+        log.info("frontOrder={}", frontOrder);
 
         if (frontOrder == null) {
             return null;
@@ -222,23 +229,25 @@ public class OrderBookService {
         // TotalUnit에서 해당 가격 필드 제거
         redisTemplate.opsForHash().delete(totalUnitKey, String.valueOf(price));
 
-        return (OrderBookEntry) frontOrder;
+        return convertToOrderBookEntry(frontOrder);
     }
 
     /**
-     * 오더북에 주문 추가
+     * 미체결 주문을 오더북에 추가
      */
-    private void addToOrderBook(OrderProcessRequest request) {
+    private void addUnfilledOrderToBook(OrderProcessRequest request, int remainingAmount) {
+        String orderKey = getOrderKey(request.stockId(), request.side(), request.price());
         String totalUnitKey = getTotalUnitKey(request.stockId(), request.side());
 
-        // 가격 리스트에 추가
+        // 1. 가격 리스트에 추가
         addPriceToSortedList(request.stockId(), request.side(), request.price());
 
-        // 주문 리스트에 추가
-        addPriceToSortedList(request.stockId(), request.side(), request.price());
+        // 2. 주문 리스트에 추가
+        OrderBookEntry entry = new OrderBookEntry(request.orderId(), remainingAmount, request.createdAt());
+        redisTemplate.opsForList().rightPush(orderKey, entry);
 
-        // 총 수량 업데이트
-        redisTemplate.opsForHash().increment(totalUnitKey, String.valueOf(request.price()), request.amount());
+        // 3. 총 수량 업데이트
+        redisTemplate.opsForHash().increment(totalUnitKey, String.valueOf(request.price()), remainingAmount);
     }
 
     /**
@@ -349,42 +358,18 @@ public class OrderBookService {
         }
     }
 
-    /**
-     * 가격 리스트 정렬 (오름차순)
-     */
-    private void sortPriceList(String priceKey) {
-        List<Object> prices = redisTemplate.opsForList().range(priceKey, 0, -1);
-        if (prices != null && !prices.isEmpty()) {
-            // Redis에서 가져온 가격들을 정렬
-            List<Integer> sortedPrices = prices.stream()
-                .map(p -> (Integer) p)
-                .sorted()
-                .collect(Collectors.toList());
-            
-            // 기존 리스트 삭제 후 정렬된 리스트로 재구성
-            redisTemplate.delete(priceKey);
-            for (Integer price : sortedPrices) {
-                redisTemplate.opsForList().rightPush(priceKey, price);
+    private OrderBookEntry convertToOrderBookEntry(Object orderObj) {
+        try {
+            if (orderObj instanceof OrderBookEntry) {
+                return (OrderBookEntry) orderObj;
+            } else if (orderObj instanceof Map) {
+                return objectMapper.convertValue(orderObj, OrderBookEntry.class);
             }
+            return null;
+        } catch (Exception e) {
+            log.error("Failed to convert to OrderBookEntry: {}", orderObj, e);
+            return null;
         }
-    }
-
-    /**
-     * 미체결 주문을 오더북에 추가
-     */
-    private void addUnfilledOrderToBook(OrderProcessRequest request, int remainingAmount) {
-        String orderKey = getOrderKey(request.stockId(), request.side(), request.price());
-        String totalUnitKey = getTotalUnitKey(request.stockId(), request.side());
-
-        // 1. 가격 리스트에 추가
-        addPriceToSortedList(request.stockId(), request.side(), request.price());
-
-        // 2. 주문 리스트에 추가
-        OrderBookEntry entry = new OrderBookEntry(request.orderId(), remainingAmount, request.createdAt());
-        redisTemplate.opsForList().rightPush(orderKey, entry);
-
-        // 3. 총 수량 업데이트
-        redisTemplate.opsForHash().increment(totalUnitKey, String.valueOf(request.price()), remainingAmount);
     }
 
     /**

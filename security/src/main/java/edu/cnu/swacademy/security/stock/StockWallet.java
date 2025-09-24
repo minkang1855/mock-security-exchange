@@ -74,6 +74,10 @@ public class StockWallet extends BaseEntity {
   }
 
   public void updateSellOrder(int quantity) {
+    this.deposit += quantity;
+  }
+
+  public void settleSellOrder(int quantity) {
     this.deposit -= quantity;
     this.reserve -= quantity;
   }

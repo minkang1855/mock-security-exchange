@@ -167,6 +167,7 @@ public class OrderService {
     }
 
     cashWallet.updateBuyOrder(requestAmount);
+    cashWalletRepository.save(cashWallet);
     log.info("Buy order: Cash wallet tied amount increased by {}", requestAmount);
   }
 
@@ -195,6 +196,7 @@ public class OrderService {
     }
 
     stockWallet.updateSellOrder(quantity);
+    stockWalletRepository.save(stockWallet);
     log.info("Sell order: Stock wallet tied amount increased by {}", quantity);
   }
 
@@ -242,6 +244,7 @@ public class OrderService {
         yield OrderSubmitResponse.success();
       }
       case "Rejected" -> {
+        if (exchangeResponse.reason().equals("거래소 서버 오류")) throw new SecurityException(ErrorCode.EXCHANGE_SERVER_COMMUNICATION_FAILED);
         // 거절 처리
         processRejectedOrder(order, request, orderSide);
         yield OrderSubmitResponse.rejected(exchangeResponse.reason());
@@ -289,7 +292,7 @@ public class OrderService {
       .orElseThrow(() -> new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND));
 
     int matchedAmountInCash = matchedPrice * matchedAmount;
-    makerCashWallet.updateBuyOrder(matchedAmountInCash);
+    makerCashWallet.settleBuyOrder(matchedAmountInCash);
     cashWalletRepository.save(makerCashWallet);
 
     // 현금 계좌 내역 생성
@@ -299,7 +302,7 @@ public class OrderService {
     StockWallet takerStockWallet = stockWalletRepository.findByUserIdAndStockIdWithLock(takerOrder.getUser().getId(), stockId)
       .orElseThrow(() -> new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND));
 
-    takerStockWallet.updateSellOrder(matchedAmount);
+    takerStockWallet.settleSellOrder(matchedAmount);
 
     // 3. Maker(매수자) 종목 계좌 처리
     StockWallet makerStockWallet = stockWalletRepository.findByUserIdAndStockIdWithLock(makerOrder.getUser().getId(), stockId)
@@ -340,14 +343,14 @@ public class OrderService {
     StockWallet makerStockWallet = stockWalletRepository.findByUserIdAndStockIdWithLock(makerOrder.getUser().getId(), stockId)
       .orElseThrow(() -> new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND));
 
-    makerStockWallet.updateSellOrder(matchedAmount); // 매도 수량 차감
+    makerStockWallet.settleSellOrder(matchedAmount); // 매도 수량 차감
 
     // 2. Taker(매수자) 현금 계좌 처리
     CashWallet takerCashWallet = cashWalletRepository.findByUserIdWithLock(takerOrder.getUser().getId())
       .orElseThrow(() -> new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND));
 
     int matchedAmountInCash = matchedPrice * matchedAmount;
-    takerCashWallet.updateBuyOrder(matchedAmountInCash);
+    takerCashWallet.settleBuyOrder(matchedAmountInCash);
     cashWalletRepository.save(takerCashWallet);
 
     createCashWalletHistory(takerCashWallet, CashWalletTransactionType.TRADE_RECEIPT, matchedAmountInCash);

@@ -74,6 +74,10 @@ public class CashWallet extends BaseEntity {
   }
 
   public void updateBuyOrder(int requestAmount) {
+    this.deposit += requestAmount;
+  }
+
+  public void settleBuyOrder(int requestAmount) {
     this.deposit -= requestAmount;
     this.reserve += requestAmount;
   }
