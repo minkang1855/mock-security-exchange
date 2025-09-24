@@ -19,4 +19,10 @@ public class SecurityException extends Exception {
     this.errorCode = errorCode;
     this.errorResponse = new ErrorResponse(errorCode.getCode(), errorCode.getMessage());
   }
+
+  public SecurityException(ErrorCode errorCode, String customMessage) {
+    super(customMessage);
+    this.errorCode = errorCode;
+    this.errorResponse = new ErrorResponse(errorCode.getCode(), customMessage);
+  }
 }

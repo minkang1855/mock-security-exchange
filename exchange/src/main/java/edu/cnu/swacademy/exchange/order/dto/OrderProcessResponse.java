@@ -24,5 +24,9 @@ public record OrderProcessResponse(
     public static OrderProcessResponse rejected(String reason) {
         return new OrderProcessResponse("Rejected", null, null, null, null, reason);
     }
+    
+    public static OrderProcessResponse cancelled() {
+        return new OrderProcessResponse("Cancelled", null, null, null, null, null);
+    }
 }
 

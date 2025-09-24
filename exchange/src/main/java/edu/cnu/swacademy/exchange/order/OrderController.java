@@ -1,5 +1,7 @@
 package edu.cnu.swacademy.exchange.order;
 
+import edu.cnu.swacademy.exchange.order.dto.OrderCancelRequest;
+import edu.cnu.swacademy.exchange.order.dto.OrderCancelResponse;
 import edu.cnu.swacademy.exchange.order.dto.OrderProcessRequest;
 import edu.cnu.swacademy.exchange.order.dto.OrderProcessResponse;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +43,31 @@ public class OrderController {
             request.orderId(), e.getClass(), e.getMessage());
 
         return OrderProcessResponse.rejected("거래소 서버 오류");
+    }
+  }
+
+  /**
+   * 주문 취소
+   * 오더북에 등록된 미체결 주문을 취소 처리합니다.
+   *
+   * @param request 주문 취소 요청
+   * @return 주문 취소 결과
+   */
+  @DeleteMapping("/order")
+  public OrderCancelResponse cancelOrder(@RequestBody OrderCancelRequest request) {
+    log.info("Received order cancellation request: orderId={}, stockId={}, side={}, price={}",
+        request.orderId(), request.stockId(), request.side(), request.price());
+    try {
+        OrderCancelResponse response = orderBookService.cancelOrder(request);
+
+        log.info("Order cancellation completed: orderId={}, matchResult={}",
+            request.orderId(), response.matchResult());
+
+        return response;
+    } catch (Exception e) {
+        log.error("Failed to cancel order: orderId={}, e={}, msg={}",
+            request.orderId(), e.getClass(), e.getMessage());
+        return OrderCancelResponse.rejected();
     }
   }
 }

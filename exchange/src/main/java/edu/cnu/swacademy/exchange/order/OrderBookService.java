@@ -2,6 +2,8 @@ package edu.cnu.swacademy.exchange.order;
 
 import edu.cnu.swacademy.exchange.order.dto.MakerOrderResponse;
 import edu.cnu.swacademy.exchange.order.dto.OrderBookEntry;
+import edu.cnu.swacademy.exchange.order.dto.OrderCancelRequest;
+import edu.cnu.swacademy.exchange.order.dto.OrderCancelResponse;
 import edu.cnu.swacademy.exchange.order.dto.OrderProcessRequest;
 import edu.cnu.swacademy.exchange.order.dto.OrderProcessResponse;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +12,6 @@ import org.springframework.data.redis.connection.RedisListCommands;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -46,12 +47,74 @@ public class OrderBookService {
         if (matchResult.matchResult().equals("Matched")) {
             log.info("Order matched: taker-order-id={}, maker-order-ids={}",
                 matchResult.takerOrderId(), matchResult.makers().stream().map(MakerOrderResponse::orderId).toList());
-            return matchResult;
         } else if (matchResult.matchResult().equals("Unmatched")) {
             log.info("Order added to order book: orderId={}", request.orderId());
-            return OrderProcessResponse.unmatched();
         } else {
             throw new RuntimeException("Order processing failed");
+        }
+
+        return matchResult;
+    }
+
+    /**
+     * 주문 취소
+     */
+    public OrderCancelResponse cancelOrder(OrderCancelRequest request) {
+        log.info("Cancelling order: orderId={}, stockId={}, side={}, price={}", 
+            request.orderId(), request.stockId(), request.side(), request.price());
+
+        try {
+            // 1. 요청한 정보를 바탕으로 Orders 해당 가격 및 side의 주문 모두 조회
+            String orderKey = getOrderKey(request.stockId(), request.side(), request.price());
+            List<Object> orders = redisTemplate.opsForList().range(orderKey, 0, -1);
+            
+            if (orders == null || orders.isEmpty()) {
+                log.info("No orders found for stockId={}, side={}, price={}",
+                    request.stockId(), request.side(), request.price());
+                return OrderCancelResponse.rejected();
+            }
+
+            // 2. 조회한 주문을 순회하면서 order_id가 동일한게 있는지 확인
+            OrderBookEntry targetOrder = null;
+            for (Object orderObj : orders) {
+                OrderBookEntry order = (OrderBookEntry) orderObj;
+                if (order.getOrderId() == request.orderId()) {
+                    targetOrder = order;
+                    break;
+                }
+            }
+
+            // 3. 없으면 예외 던지기
+            if (targetOrder == null) {
+                log.info("Order not found in order book: orderId={}, stockId={}, side={}, price={}",
+                    request.orderId(), request.stockId(), request.side(), request.price());
+                return OrderCancelResponse.rejected();
+            }
+
+            // 4. 있으면 해당 order를 Orders에서 삭제
+            redisTemplate.opsForList().remove(orderKey, 1, targetOrder);
+            log.info("Order removed from order book: orderId={}, unfilledUnit={}", 
+                request.orderId(), targetOrder.getUnfilledUnit());
+
+            // 5. 취소된 수량 만큼 totalUnits 감소
+            String totalUnitKey = getTotalUnitKey(request.stockId(), request.side());
+            int cancelledAmount = targetOrder.getUnfilledUnit();
+            redisTemplate.opsForHash().increment(totalUnitKey, String.valueOf(request.price()), -cancelledAmount);
+
+            // 6. order를 삭제한 이후 해당 Orders에 주문이 없으면 이에 해당하는 prices와 totalUnits 제거
+            if (orders.size() == 1) {
+                // 해당 가격의 주문이 모두 없어졌으면 Prices에서도 제거
+                removePriceFromOrderBook(request.stockId(),  request.side(), request.price());
+                log.info("Removed price {} from price list: stockId={}, side={}", 
+                    request.price(), request.stockId(), request.side());
+            }
+
+            log.info("Order cancelled successfully: orderId={}, cancelledAmount={}", 
+                request.orderId(), cancelledAmount);
+            return OrderCancelResponse.cancelled();
+        } catch (Exception e) {
+            log.error("Failed to cancel order: orderId={}, error={}", request.orderId(), e.getMessage(), e);
+            return OrderCancelResponse.rejected();
         }
     }
 
@@ -133,7 +196,7 @@ public class OrderBookService {
         }
         
         if (!makers.isEmpty()) {
-            return OrderProcessResponse.matched(request.orderId(), makers);
+            return OrderProcessResponse.matched(request.orderId(), makers, request.price(), totalMatchUnit);
         } else {
             throw new RuntimeException("Order processing failed");
         }
@@ -338,4 +401,5 @@ public class OrderBookService {
     private String getTotalUnitKey(int stockId, String side) {
         return String.format("%d:%s:total-unit", stockId, side);
     }
+
 }

@@ -3,7 +3,9 @@ package edu.cnu.swacademy.security.order;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import edu.cnu.swacademy.security.common.SecurityException;
+import edu.cnu.swacademy.security.order.dto.OrderCancelResponse;
 import edu.cnu.swacademy.security.order.dto.OrderSubmitRequest;
 import edu.cnu.swacademy.security.order.dto.OrderSubmitResponse;
 import edu.cnu.swacademy.security.order.dto.UnfilledOrdersResponse;
@@ -44,6 +47,25 @@ public class OrderController {
     int userId = (int) request.getAttribute("user_id");
 
     return orderService.submitOrder(userId, orderRequest);
+  }
+
+  /**
+   * 주문 취소
+   * 사용자가 이미 접수한 주문 중 미체결 수량을 모두 취소합니다.
+   *
+   * @param request HTTP 요청 (JWT 토큰에서 사용자 ID 추출)
+   * @param orderId 주문 ID
+   * @return 주문 취소 응답
+   * @throws SecurityException 주문 취소 실패 시 발생
+   */
+  @DeleteMapping("/{orderId}")
+  public OrderCancelResponse cancelOrder(
+      HttpServletRequest request,
+      @PathVariable int orderId
+  ) throws SecurityException {
+    // JWT에서 사용자 ID 추출
+    int userId = (int) request.getAttribute("user_id");
+    return orderService.cancelOrder(userId, orderId);
   }
 
   /**
