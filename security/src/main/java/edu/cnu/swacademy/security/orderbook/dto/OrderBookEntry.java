@@ -1,4 +1,4 @@
-package edu.cnu.swacademy.exchange.order.dto;
+package edu.cnu.swacademy.security.orderbook.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,8 +14,4 @@ public class OrderBookEntry {
     private int orderId;
     private int unfilledUnit;
     private LocalDateTime createdAt;
-
-    public void decreaseAmount(int matchedAmount) {
-        this.unfilledUnit -= matchedAmount;
-    }
 }

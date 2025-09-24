@@ -139,7 +139,7 @@ public class PriceCalculationService {
    * @param referencePrice 기준가
    * @return 상한가 (틱 사이즈에 맞게 조정됨)
    */
-  private BigDecimal calculateUpperLimitPrice(BigDecimal referencePrice) {
+  public BigDecimal calculateUpperLimitPrice(BigDecimal referencePrice) {
     BigDecimal upperLimit = referencePrice.multiply(BigDecimal.ONE.add(PRICE_LIMIT_PERCENTAGE))
         .setScale(PRICE_SCALE, RoundingMode.CEILING);
     
