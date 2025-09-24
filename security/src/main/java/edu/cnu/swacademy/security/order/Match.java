@@ -42,4 +42,10 @@ public class Match extends BaseEntity {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(nullable = false)
   private Order takerOrder;
+
+  public Match(Stock stock, Order makerOrder, Order takerOrder) {
+    this.stock = stock;
+    this.makerOrder = makerOrder;
+    this.takerOrder = takerOrder;
+  }
 }

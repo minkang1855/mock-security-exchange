@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor  
 public enum ErrorCode {
 
+  INVALID_ORDER_SIDE("400", "Invalid order side"),
+
   INVALID_CREDENTIALS("401", "Invalid credentials."),
   UNAUTHORIZED("401", "Unauthorized"),
 
@@ -17,6 +19,7 @@ public enum ErrorCode {
   CASH_WALLET_NOT_FOUND("404", "Cash wallet not found."),
   STOCK_NOT_FOUND("404", "Stock not found."),
   STOCK_WALLET_NOT_FOUND("404", "Stock wallet not found."),
+  ORDER_NOT_FOUND("404", "Order not found."),
 
   EMAIL_ALREADY_EXISTS("409", "Email already exists."),
   CASH_WALLET_ALREADY_EXISTS("409", "Cash wallet already exists."),
@@ -44,6 +47,7 @@ public enum ErrorCode {
   DECRYPTION_FAILED("500", "Decryption failed."),
   ACCOUNT_NUMBER_GENERATION_FAILED("500", "Failed to generate unique account number."),
   EXCHANGE_SERVER_START_FAILED("500", "Failed to start exchange server."),
+  EXCHANGE_SERVER_COMMUNICATION_FAILED("500", "Failed to communicate with exchange server."),
   FAILED_CALCULATE_NEXT_PRICES("500", "Failed to calculate next prices.");
 
   private final String code;

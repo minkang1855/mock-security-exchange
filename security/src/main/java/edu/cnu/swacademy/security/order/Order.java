@@ -1,8 +1,5 @@
 package edu.cnu.swacademy.security.order;
 
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
-
 import edu.cnu.swacademy.security.common.BaseEntity;
 import edu.cnu.swacademy.security.stock.Stock;
 import edu.cnu.swacademy.security.user.User;
@@ -17,12 +14,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @SQLRestriction("deleted_at IS NULL")
 @SQLDelete(sql = "UPDATE `order` SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
@@ -67,5 +64,10 @@ public class Order extends BaseEntity {
     this.amount = amount;
     this.unfilledAmount = unfilledAmount;
     this.canceledAmount = 0;
+  }
+
+  public void cancel() {
+    this.unfilledAmount = 0;
+    this.canceledAmount = unfilledAmount;
   }
 }

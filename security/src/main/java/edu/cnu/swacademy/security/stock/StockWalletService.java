@@ -47,7 +47,7 @@ public class StockWalletService {
         });
 
     // 3. 이미 해당 종목에 대한 계좌가 존재하는지 확인
-    if (stockWalletRepository.existsByUserIdAndStockId(userId, request.stockId())) {
+    if (stockWalletRepository.findByUserIdAndStockIdWithLock(userId, request.stockId()).isPresent()) {
       log.info("Stock wallet already exists for user-id(={}), stock-id(={})", userId, request.stockId());
       throw new SecurityException(ErrorCode.STOCK_WALLET_ALREADY_EXISTS);
     }
@@ -115,6 +115,10 @@ public class StockWalletService {
           log.info("Stock wallet not found for user-id(={}), stock-id(={})", userId, stockId);
           return new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND);
         });
+
+    if (stockWallet.isBlocked()) {
+      throw new SecurityException(ErrorCode.STOCK_WALLET_BLOCKED);
+    }
 
     // 2. 잔고 계산
     int reserve = stockWallet.getReserve();

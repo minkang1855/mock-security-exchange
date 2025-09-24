@@ -1,7 +1,5 @@
 package edu.cnu.swacademy.security.market;
 
-import java.time.LocalDate;
-
 import edu.cnu.swacademy.security.common.BaseEntity;
 import edu.cnu.swacademy.security.stock.Stock;
 import jakarta.persistence.Column;
@@ -13,14 +11,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import java.time.LocalDate;
+
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @SQLRestriction("deleted_at IS NULL")
 @SQLDelete(sql = "UPDATE market_status SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
@@ -62,10 +60,10 @@ public class MarketStatus extends BaseEntity {
   private int lowestPrice;
 
   @Column(columnDefinition = "INT UNSIGNED")
-  private int tradingVolume;
+  private int tradingVolume; // 거래량
 
   @Column(columnDefinition = "BIGINT UNSIGNED")
-  private long tradingAmount;
+  private long tradingAmount; // 거래 대금
 
   public MarketStatus(Stock stock, LocalDate tradingDate, int referencePrice, int upperLimitPrice, int lowerLimitPrice) {
     this.stock = stock;
@@ -79,5 +77,13 @@ public class MarketStatus extends BaseEntity {
     this.lowestPrice = 0;
     this.tradingVolume = 0;
     this.tradingAmount = 0;
+  }
+
+  public void update(int price, int quantity, int tradingAmount) {
+    this.openingPrice = this.openingPrice == 0 ? price : this.openingPrice;
+    this.lowestPrice = (this.lowestPrice == 0 || price < this.lowestPrice) ? price : this.lowestPrice;
+    this.highestPrice = (this.highestPrice == 0 || this.highestPrice < price) ? price : this.highestPrice;
+    this.tradingVolume += quantity;
+    this.tradingAmount += tradingAmount;
   }
 }

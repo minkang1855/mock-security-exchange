@@ -10,8 +10,6 @@ import jakarta.persistence.LockModeType;
 
 public interface CashWalletRepository extends JpaRepository<CashWallet, Integer> {
 
-  Optional<CashWallet> findByAccountNumber(String accountNumber);
-
   Optional<CashWallet> findByUserId(int userId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)

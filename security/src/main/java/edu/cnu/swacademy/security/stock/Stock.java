@@ -10,12 +10,13 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+@Setter
 @Getter
-@AllArgsConstructor
-@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+@NoArgsConstructor
 @SQLRestriction("deleted_at IS NULL")
 @SQLDelete(sql = "UPDATE stock SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Table(name = "stock")
@@ -32,4 +33,9 @@ public class Stock extends BaseEntity {
 
   @Column(nullable = false, length = 6, unique = true)
   private String code;
+
+  public Stock(String name, String code) {
+    this.name = name;
+    this.code = code;
+  }
 }

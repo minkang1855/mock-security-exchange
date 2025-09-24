@@ -1,11 +1,17 @@
 package edu.cnu.swacademy.security.order;
 
 import edu.cnu.swacademy.security.asset.CashWallet;
+import edu.cnu.swacademy.security.asset.CashWalletHistory;
+import edu.cnu.swacademy.security.asset.CashWalletHistoryRepository;
 import edu.cnu.swacademy.security.asset.CashWalletRepository;
+import edu.cnu.swacademy.security.asset.CashWalletTransactionType;
 import edu.cnu.swacademy.security.common.ErrorCode;
 import edu.cnu.swacademy.security.common.SecurityException;
+import edu.cnu.swacademy.security.market.MarketStatus;
 import edu.cnu.swacademy.security.market.MarketStatusRepository;
 import edu.cnu.swacademy.security.market.TickSizeUtil;
+import edu.cnu.swacademy.security.order.dto.ExchangeOrderResponse;
+import edu.cnu.swacademy.security.order.dto.MakerOrderResponse;
 import edu.cnu.swacademy.security.order.dto.OrderSubmitRequest;
 import edu.cnu.swacademy.security.order.dto.OrderSubmitResponse;
 import edu.cnu.swacademy.security.order.dto.UnfilledOrderResponse;
@@ -13,12 +19,14 @@ import edu.cnu.swacademy.security.order.dto.UnfilledOrdersResponse;
 import edu.cnu.swacademy.security.stock.Stock;
 import edu.cnu.swacademy.security.stock.StockRepository;
 import edu.cnu.swacademy.security.stock.StockWallet;
+import edu.cnu.swacademy.security.stock.StockWalletHistory;
+import edu.cnu.swacademy.security.stock.StockWalletHistoryRepository;
 import edu.cnu.swacademy.security.stock.StockWalletRepository;
+import edu.cnu.swacademy.security.stock.StockWalletTransactionType;
 import edu.cnu.swacademy.security.user.User;
 import edu.cnu.swacademy.security.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.aspectj.weaver.ast.Or;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -43,6 +51,10 @@ public class OrderService {
   private final CashWalletRepository cashWalletRepository;
   private final StockWalletRepository stockWalletRepository;
   private final MarketStatusRepository marketStatusRepository;
+  private final SendOrderService sendOrderService;
+  private final CashWalletHistoryRepository cashWalletHistoryRepository;
+  private final StockWalletHistoryRepository stockWalletHistoryRepository;
+  private final MatchRepository matchRepository;
 
   /**
    * 주문 접수
@@ -61,15 +73,15 @@ public class OrderService {
     // 1. 사용자 존재 여부 확인
     User user = userRepository.findById(userId)
         .orElseThrow(() -> {
-        log.info("User not found for id(={})", userId);
-        return new SecurityException(ErrorCode.USER_NOT_FOUND);
+          log.info("User not found for id(={})", userId);
+          return new SecurityException(ErrorCode.USER_NOT_FOUND);
         });
 
     // 2. 종목 존재 여부 확인
     Stock stock = stockRepository.findById(request.stockId())
         .orElseThrow(() -> {
-        log.info("Stock not found for id(={})", request.stockId());
-        return new SecurityException(ErrorCode.STOCK_NOT_FOUND);
+          log.info("Stock not found for id(={})", request.stockId());
+          return new SecurityException(ErrorCode.STOCK_NOT_FOUND);
         });
 
     // 3. 주문 방향 검증
@@ -77,64 +89,111 @@ public class OrderService {
     try {
         orderSide = OrderSide.valueOf(request.side().toUpperCase());
     } catch (Exception e) {
-        log.info("Invalid order side: {}", request.side());
-        return OrderSubmitResponse.rejected("유효하지 않은 주문 방향입니다.");
+          log.info("Invalid order side: {}", request.side());
+          throw new SecurityException(ErrorCode.INVALID_ORDER_SIDE);
     }
 
-    // 4. 지갑 정지 여부 검증
-    validateWalletStatus(userId, request.stockId());
-
-    // 5. 가격 틱 사이즈 검증
+    // 4. 가격 틱 사이즈 검증
     validateTickSize(request.price());
 
-    // 6. 상하한가 검증
+    // 5. 상하한가 검증
     validatePriceLimits(request.stockId(), request.price());
 
-    // 7. 현금/종목 게좌 내 자산 부족 검증 및 업데이트
-    validateAndUpdateWallet(userId, request.stockId(), orderSide, request.price(), request.quantity());
+    // 6. 지갑 정지 및 자산 검증 이후 업데이트
+    validateWalletStatusAndUpdate(userId, request.stockId(), orderSide, request.price(), request.quantity());
 
-    // 8. 주문 생성
+    // 7. 주문 생성
     Order order = orderRepository.save(
         new Order(
             user, stock, orderSide, request.price(), request.quantity(), request.quantity()
         )
     );
 
-    // 9. Exchange 서버로 주문 전송
+    // 8. Exchange 서버로 주문 전송
+    ExchangeOrderResponse exchangeResponse = sendOrderService.sendOrderToExchange(
+        order.getId(),
+        request.stockId(),
+        request.price(),
+        request.quantity(),
+        orderSide.getValue(),
+        order.getCreatedAt()
+    );
 
-    log.info("Order submitted successfully: order-id(={})", order.getId());
+    log.info("Order submitted successfully: order-id(={}), match-result(={})",
+        order.getId(), exchangeResponse.matchResult());
 
-    // 10. Exchange 서버로부터 전달 받은 값 반환
-    return OrderSubmitResponse.success();
+    // 9. Exchange 서버 응답에 따른 후속 처리
+    return processExchangeResponse(order, exchangeResponse, request, orderSide);
   }
 
   /**
-   * 지갑 정지 여부 검증
+   * 지갑 정지 여부 검증 및 자산 부족 검증 및 업데이트
    */
-  private void validateWalletStatus(int userId, int stockId) throws SecurityException {
-    // 현금 지갑 정지 여부 확인
+  private void validateWalletStatusAndUpdate(int userId, int stockId, OrderSide orderSide, int price, int quantity) throws SecurityException {
+    if (orderSide == OrderSide.BUY) {
+      // 매수 주문: 현금 지갑만 검증 및 업데이트
+      validateAndUpdateCashWallet(userId, price, quantity);
+    } else if (orderSide == OrderSide.SELL) {
+      // 매도 주문: 종목 지갑만 검증 및 업데이트
+      validateAndUpdateStockWallet(userId, stockId, quantity);
+    }
+  }
+
+  /**
+   * 현금 지갑 검증 및 업데이트 (매수 주문용)
+   */
+  private void validateAndUpdateCashWallet(int userId, int price, int quantity) throws SecurityException {
+    // 현금 지갑 조회
     CashWallet cashWallet = cashWalletRepository.findByUserId(userId)
         .orElseThrow(() -> {
           log.info("Cash wallet not found for user-id(={})", userId);
           return new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND);
         });
 
+    // 현금 지갑 정지 여부 확인
     if (cashWallet.isBlocked()) {
       log.info("Cash wallet is blocked for user-id(={})", userId);
       throw new SecurityException(ErrorCode.CASH_WALLET_BLOCKED);
     }
 
-    // 종목 지갑 정지 여부 확인
+    // 현금 지갑 잔액 확인 및 묶인 금액 업데이트
+    int requestAmount = price * quantity;
+    if (requestAmount > cashWallet.getAvailable()) {
+      log.info("Insufficient cash wallet balance for user-id(={}). request-amount: {}",
+          userId, requestAmount);
+      throw new SecurityException(ErrorCode.INSUFFICIENT_BALANCE);
+    }
+
+    cashWallet.updateBuyOrder(requestAmount);
+    log.info("Buy order: Cash wallet tied amount increased by {}", requestAmount);
+  }
+
+  /**
+   * 종목 지갑 검증 및 업데이트 (매도 주문용)
+   */
+  private void validateAndUpdateStockWallet(int userId, int stockId, int quantity) throws SecurityException {
+    // 종목 지갑 조회
     StockWallet stockWallet = stockWalletRepository.findByUserIdAndStockId(userId, stockId)
         .orElseThrow(() -> {
           log.info("Stock wallet not found for user-id(={}), stock-id(={})", userId, stockId);
           return new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND);
         });
 
+    // 종목 지갑 정지 여부 확인
     if (stockWallet.isBlocked()) {
       log.info("Stock wallet is blocked for stock-id(={})", stockId);
       throw new SecurityException(ErrorCode.STOCK_WALLET_BLOCKED);
     }
+
+    // 종목 지갑 잔액 확인 및 묶인 수량 업데이트
+    if (quantity > stockWallet.getAvailable()) {
+      log.info("Insufficient stock balance for user-id(={}), stock-id(={}). Required: {}",
+          userId, stockId, quantity);
+      throw new SecurityException(ErrorCode.INSUFFICIENT_BALANCE);
+    }
+
+    stockWallet.updateSellOrder(quantity);
+    log.info("Sell order: Stock wallet tied amount increased by {}", quantity);
   }
 
   /**
@@ -154,14 +213,11 @@ public class OrderService {
   private void validatePriceLimits(int stockId, int price) throws SecurityException {
     // 당일 MarketStatus 조회
     LocalDate today = LocalDate.now();
-    var marketStatusOpt = marketStatusRepository.findByStockIdAndTradingDate(stockId, today);
-    
-    if (marketStatusOpt.isEmpty()) {
-      log.error("No market status found for stock-id(={}) on date(={})", stockId, today);
-      throw new SecurityException(ErrorCode.INTERNAL_SERVER_ERROR);
-    }
-
-    var marketStatus = marketStatusOpt.get();
+    MarketStatus marketStatus = marketStatusRepository.findByStockIdAndTradingDate(stockId, today)
+        .orElseThrow(() -> {
+          log.error("No market status found for stock-id(={}) on date(={})", stockId, today);
+          return new SecurityException(ErrorCode.INTERNAL_SERVER_ERROR);
+        });
     
     if (price < marketStatus.getLowerLimitPrice() || price > marketStatus.getUpperLimitPrice()) {
       log.info("Price {} is out of limits for stock-id(={}). Lower: {}, Upper: {}", 
@@ -171,43 +227,224 @@ public class OrderService {
   }
 
   /**
-   * 현금/종목 게좌 내 자산 부족 검증 및 업데이트
+   * Exchange 서버 응답에 따른 후속 처리
    */
-  private void validateAndUpdateWallet(int userId, int stockId, OrderSide orderSide, int price, int quantity) throws SecurityException {
-    if (orderSide == OrderSide.BUY) {
-      // 매수 주문: 현금 지갑 잔액 확인
-      CashWallet cashWallet = cashWalletRepository.findByUserIdWithLock(userId)
-          .orElseThrow(() -> {
-            log.info("Cash wallet not found for user-id(={})", userId);
-            return new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND);
-          });
-
-      int requestAmount = price * quantity;
-      if (requestAmount > cashWallet.getAvailable()) {
-        log.info("Insufficient cash balance for user-id(={}). request-amount: {}",
-            userId, requestAmount);
-        throw new SecurityException(ErrorCode.INSUFFICIENT_BALANCE);
+  private OrderSubmitResponse processExchangeResponse(Order order, ExchangeOrderResponse exchangeResponse, OrderSubmitRequest request, OrderSide orderSide) throws SecurityException {
+    return switch (exchangeResponse.matchResult()) {
+      case "Unmatched" ->
+        // 미체결: 후속 조치 불필요
+          OrderSubmitResponse.success();
+      case "Matched" -> {
+        // 체결 완료: 지갑, 체결 내역, 장 상태 업데이트
+        processMatchedOrder(exchangeResponse, request, orderSide);
+        yield OrderSubmitResponse.success();
       }
-
-      cashWallet.updateBuyOrder(requestAmount);
-      log.info("Buy order: Cash wallet tied amount increased.");
-    } else {
-      // 매도 주문: 종목 지갑 잔액 확인
-      StockWallet stockWallet = stockWalletRepository.findByUserIdAndStockIdWithLock(userId, stockId)
-          .orElseThrow(() -> {
-            log.info("Stock wallet not found for user-id(={}), stock-id(={})", userId, stockId);
-            return new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND);
-          });
-
-      if (quantity > stockWallet.getAvailable()) {
-        log.info("Insufficient stock balance for user-id(={}), stock-id(={}). Required: {}",
-            userId, stockId, quantity);
-        throw new SecurityException(ErrorCode.INSUFFICIENT_BALANCE);
+      case "Rejected" -> {
+        // 거절 처리
+        processRejectedOrder(order, request, orderSide);
+        yield OrderSubmitResponse.rejected(exchangeResponse.reason());
       }
+      default -> throw new SecurityException(ErrorCode.EXCHANGE_SERVER_COMMUNICATION_FAILED);
+    };
+  }
 
-      stockWallet.updateSellOrder(quantity);
-      log.info("Sell order: Stock wallet tied amount increased.");
+  /**
+  * 체결 완료 주문 처리
+  */
+  private void processMatchedOrder(ExchangeOrderResponse exchangeResponse, OrderSubmitRequest request, OrderSide orderSide) throws SecurityException {
+    List<MakerOrderResponse> makers = exchangeResponse.makers();
+    for (MakerOrderResponse maker : makers) {
+      int matchedAmount = maker.matchedAmount();
+      int matchedPrice = request.price();
+
+      // maker가 매수자인지 매도자인지 판단
+      OrderSide makerSide = (orderSide == OrderSide.BUY) ? OrderSide.SELL : OrderSide.BUY;
+
+      if (makerSide == OrderSide.BUY) {
+        // maker가 매수자, taker가 매도자
+        processMakerBuyTakerSell(exchangeResponse, maker, matchedAmount, matchedPrice, request.stockId());
+      } else {
+        // maker가 매도자, taker가 매수자
+        processMakerSellTakerBuy(exchangeResponse, maker, matchedAmount, matchedPrice, request.stockId());
+      }
     }
+
+    // 장 상태 업데이트
+    updateMarketStatus(request.stockId(), exchangeResponse);
+  }
+
+  /**
+  * Maker가 매수자, Taker가 매도자인 경우 처리
+  */
+  private void processMakerBuyTakerSell(ExchangeOrderResponse exchangeResponse, MakerOrderResponse maker, int matchedAmount, int matchedPrice, int stockId) throws SecurityException {
+    Order makerOrder = orderRepository.findById(maker.orderId())
+        .orElseThrow(() -> new SecurityException(ErrorCode.ORDER_NOT_FOUND));
+    Order takerOrder = orderRepository.findById(exchangeResponse.takerOrderId())
+        .orElseThrow(() -> new SecurityException(ErrorCode.ORDER_NOT_FOUND));
+
+    // 1. Maker(매수자) 현금 계좌 처리
+    CashWallet makerCashWallet = cashWalletRepository.findByUserIdWithLock(makerOrder.getUser().getId())
+      .orElseThrow(() -> new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND));
+
+    int matchedAmountInCash = matchedPrice * matchedAmount;
+    makerCashWallet.updateBuyOrder(matchedAmountInCash);
+    cashWalletRepository.save(makerCashWallet);
+
+    // 현금 계좌 내역 생성
+    createCashWalletHistory(makerCashWallet, CashWalletTransactionType.TRADE_RECEIPT, matchedAmountInCash);
+
+    // 2. Taker(매도자) 종목 계좌 처리
+    StockWallet takerStockWallet = stockWalletRepository.findByUserIdAndStockIdWithLock(takerOrder.getUser().getId(), stockId)
+      .orElseThrow(() -> new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND));
+
+    takerStockWallet.updateSellOrder(matchedAmount);
+
+    // 3. Maker(매수자) 종목 계좌 처리
+    StockWallet makerStockWallet = stockWalletRepository.findByUserIdAndStockIdWithLock(makerOrder.getUser().getId(), stockId)
+      .orElse(null);
+
+    if (makerStockWallet == null) {
+      // 종목 계좌가 없으면 새로 생성
+      User makerUser = userRepository.findById(makerOrder.getUser().getId())
+          .orElseThrow(() -> new SecurityException(ErrorCode.USER_NOT_FOUND));
+      Stock stock = stockRepository.findById(stockId)
+          .orElseThrow(() -> new SecurityException(ErrorCode.STOCK_NOT_FOUND));
+
+      makerStockWallet = new StockWallet(makerUser, stock);
+      makerStockWallet.deposit(matchedAmount); // 매수한 수량만큼 초기화
+    } else {
+      makerStockWallet.deposit(matchedAmount); // 매수한 수량 추가
+    }
+    stockWalletRepository.save(makerStockWallet);
+
+    // 종목 계좌 내역 생성
+    createStockWalletHistory(takerStockWallet, StockWalletTransactionType.SELL_ORDER_EXECUTED, matchedAmount);
+    createStockWalletHistory(makerStockWallet, StockWalletTransactionType.BUY_ORDER_EXECUTED, matchedAmount);
+
+    // 4. 체결 내역 생성
+    createMatch(stockId, takerOrder, maker, matchedAmount, matchedPrice);
+  }
+
+  /**
+  * Maker가 매도자, Taker가 매수자인 경우 처리
+  */
+  private void processMakerSellTakerBuy(ExchangeOrderResponse exchangeResponse, MakerOrderResponse maker, int matchedAmount, int matchedPrice, int stockId) throws SecurityException {
+    Order makerOrder = orderRepository.findById(maker.orderId())
+        .orElseThrow(() -> new SecurityException(ErrorCode.ORDER_NOT_FOUND));
+    Order takerOrder = orderRepository.findById(exchangeResponse.takerOrderId())
+        .orElseThrow(() -> new SecurityException(ErrorCode.ORDER_NOT_FOUND));
+
+    // 1. Maker(매도자) 종목 계좌 처리
+    StockWallet makerStockWallet = stockWalletRepository.findByUserIdAndStockIdWithLock(makerOrder.getUser().getId(), stockId)
+      .orElseThrow(() -> new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND));
+
+    makerStockWallet.updateSellOrder(matchedAmount); // 매도 수량 차감
+
+    // 2. Taker(매수자) 현금 계좌 처리
+    CashWallet takerCashWallet = cashWalletRepository.findByUserIdWithLock(takerOrder.getUser().getId())
+      .orElseThrow(() -> new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND));
+
+    int matchedAmountInCash = matchedPrice * matchedAmount;
+    takerCashWallet.updateBuyOrder(matchedAmountInCash);
+    cashWalletRepository.save(takerCashWallet);
+
+    createCashWalletHistory(takerCashWallet, CashWalletTransactionType.TRADE_RECEIPT, matchedAmountInCash);
+
+    // 3. Taker(매수자) 종목 계좌 처리
+    StockWallet takerStockWallet = stockWalletRepository.findByUserIdAndStockIdWithLock(takerOrder.getUser().getId(), stockId)
+      .orElse(null);
+
+    if (takerStockWallet == null) {
+      // 종목 계좌가 없으면 새로 생성
+      User takerUser = takerOrder.getUser();
+      Stock stock = stockRepository.findById(stockId)
+          .orElseThrow(() -> new SecurityException(ErrorCode.STOCK_NOT_FOUND));
+
+      takerStockWallet = new StockWallet(takerUser, stock);
+      takerStockWallet.deposit(matchedAmount); // 매수한 수량만큼 초기화
+    } else {
+      takerStockWallet.deposit(matchedAmount); // 매수한 수량 추가
+    }
+    stockWalletRepository.save(takerStockWallet);
+
+    // 내역 생성
+    createStockWalletHistory(makerStockWallet, StockWalletTransactionType.SELL_ORDER_EXECUTED, -matchedAmount);
+    createStockWalletHistory(takerStockWallet, StockWalletTransactionType.BUY_ORDER_EXECUTED, matchedAmount);
+
+    // 4. 체결 내역 생성
+    createMatch(stockId, takerOrder, maker, matchedAmount, matchedPrice);
+  }
+
+  /**
+  * 거절된 주문 처리
+  */
+  private void processRejectedOrder(Order order, OrderSubmitRequest request, OrderSide orderSide) throws SecurityException {
+    int userId = order.getUser().getId();
+    int rejectedAmount = request.quantity();
+    int rejectedPrice = request.price();
+
+    order.cancel();
+    orderRepository.save(order);
+    if (orderSide == OrderSide.BUY) {
+      // 현금 지갑 롤백
+      CashWallet cashWallet = cashWalletRepository.findByUserIdWithLock(userId)
+          .orElseThrow(() -> new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND));
+
+      int rejectedAmountInCash = rejectedPrice * rejectedAmount;
+      cashWallet.updateOrderCancel(rejectedAmountInCash);
+
+      // 현금 지갑 내역 생성
+      createCashWalletHistory(cashWallet, CashWalletTransactionType.TRADE_REFUND, rejectedAmountInCash);
+    } else {
+      // 종목 지갑 롤백
+      StockWallet stockWallet = stockWalletRepository.findByUserIdAndStockIdWithLock(userId, request.stockId())
+          .orElseThrow(() -> new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND));
+
+      stockWallet.updateOrderCancel(rejectedAmount); // 매도 수량 차감
+
+      // 종목 지갑 내역 생성
+      createStockWalletHistory(stockWallet, StockWalletTransactionType.SELL_ORDER_CANCEL, rejectedAmount);
+    }
+  }
+
+  /**
+  * 체결 내역 생성
+  */
+  private void createMatch(int stockId, Order takerOrder, MakerOrderResponse maker, int amount, int price) throws SecurityException {
+      // Match 엔티티 생성 및 저장
+      Stock stock = stockRepository.findById(stockId)
+          .orElseThrow(() -> new SecurityException(ErrorCode.STOCK_NOT_FOUND));
+
+      Order makerOrder = orderRepository.findById(maker.orderId())
+          .orElseThrow(() -> new SecurityException(ErrorCode.ORDER_NOT_FOUND));
+
+      Match match = new Match(stock, makerOrder, takerOrder);
+      matchRepository.save(match);
+    }
+
+    /**
+    * 현금 지갑 내역 생성
+    */
+    private void createCashWalletHistory(CashWallet cashWallet, CashWalletTransactionType type, int amount) {
+      CashWalletHistory history = new CashWalletHistory(cashWallet, type, amount, "매수 주문 취소", cashWallet.getReserve());
+      cashWalletHistoryRepository.save(history);
+  }
+
+  /**
+  * 종목 지갑 내역 생성
+  */
+  private void createStockWalletHistory(StockWallet stockWallet, StockWalletTransactionType type, int amount) {
+    StockWalletHistory history = new StockWalletHistory(stockWallet, type, amount, "매도 주문 취소", stockWallet.getReserve());
+    stockWalletHistoryRepository.save(history);
+  }
+
+  /**
+  * 장 상태 업데이트
+  */
+  private void updateMarketStatus(int stockId, ExchangeOrderResponse exchangeResponse) throws SecurityException {
+    MarketStatus marketStatus = marketStatusRepository.findByStockIdAndTradingDate(stockId, LocalDate.now())
+        .orElseThrow(() -> new SecurityException(ErrorCode.MARKET_STATUS_NOT_FOUND));
+    marketStatus.update(exchangeResponse.price(), exchangeResponse.totalMatchedAmount(), exchangeResponse.price() * exchangeResponse.totalMatchedAmount());
   }
 
   /**
