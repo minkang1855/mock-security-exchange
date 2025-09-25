@@ -35,6 +35,9 @@ dependencies {
     runtimeOnly 'com.mysql:mysql-connector-j'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+    // Cache
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+
     // Code shortening
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

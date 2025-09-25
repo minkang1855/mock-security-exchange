@@ -3,6 +3,7 @@ package edu.cnu.swacademy.security.asset;
 import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -154,15 +155,18 @@ public class CashWalletService {
   }
 
   /**
-   * 현금 잔액 조회
+   * 현금 잔액 조회 (캐시 적용)
    * 사용자의 현금 계좌 상태를 확인하여 예치금, 대기중인 매수 주문으로 묶인 금액,
    * 그리고 실제 출금 가능 금액을 조회합니다.
-   * 
+   *
    * @param userId 사용자 ID (JWT에서 추출된 값)
    * @return 현금 잔액 정보 (현금 계좌 ID, 예치금, 묶인 금액, 출금 가능 금액)
    * @throws SecurityException 조회 실패 시 발생 (계좌 없음, 정지 상태 등)
    */
+  @Cacheable(value = "cashBalance", key = "#userId", unless = "#result == null")
   public CashBalanceResponse getBalance(int userId) throws SecurityException {
+    log.info("Cache miss - fetching cash balance from database: user-id(={})", userId);
+
     // 1. 사용자의 현금 계좌 조회
     CashWallet cashWallet = cashWalletRepository.findByUserId(userId)
         .orElseThrow(() -> {
