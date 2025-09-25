@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 오더북 관리 서비스
@@ -52,13 +51,13 @@ public class OrderBookService {
         if (matchResult.matchResult().equals("Matched")) {
             log.info("Order matched: taker-order-id={}, maker-order-ids={}",
                 matchResult.takerOrderId(), matchResult.makers().stream().map(MakerOrderResponse::orderId).toList());
+            return matchResult;
         } else if (matchResult.matchResult().equals("Unmatched")) {
             log.info("Order added to order book: orderId={}", request.orderId());
+            return OrderProcessResponse.unmatched();
         } else {
             throw new RuntimeException("Order processing failed");
         }
-
-        return matchResult;
     }
 
     /**
@@ -386,5 +385,4 @@ public class OrderBookService {
     private String getTotalUnitKey(int stockId, String side) {
         return String.format("%d:%s:total-unit", stockId, side);
     }
-
 }
