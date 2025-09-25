@@ -62,6 +62,10 @@ public class Order extends BaseEntity {
     this.canceledAmount = 0;
   }
 
+  public void updateMatch(int matchedAmount) {
+    this.unfilledAmount -= matchedAmount;
+  }
+
   public void cancel() {
     this.canceledAmount = unfilledAmount;
     this.unfilledAmount = 0;

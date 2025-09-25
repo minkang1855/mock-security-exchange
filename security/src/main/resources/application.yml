@@ -13,7 +13,7 @@ spring:
 
   data:
     redis:
-      host: ${REDIS_HOST:redis}
+      host: ${REDIS_HOST:redis-db}
       port: ${REDIS_PORT:6379}
 
 server:
