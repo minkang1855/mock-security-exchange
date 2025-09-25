@@ -280,6 +280,84 @@ public class OrderService {
   }
 
   /**
+   * 주문 취소
+   */
+  @Transactional(rollbackFor = Exception.class, isolation = Isolation.SERIALIZABLE)
+  public OrderCancelResponse cancelOrder(int userId, int orderId) throws SecurityException {
+    // 1. 주문 존재 여부 및 소유권 검증
+    Order order = orderRepository.findById(orderId)
+        .orElseThrow(() -> new SecurityException(ErrorCode.ORDER_NOT_FOUND));
+
+    if (order.getUser().getId() != userId) {
+      throw new SecurityException(ErrorCode.ORDER_ACCESS_DENIED);
+    }
+
+    // 2. 주문 상태 검증 (이미 취소된 주문인지 확인)
+    if (order.getUnfilledAmount() == 0 && order.getCanceledAmount() != 0) {
+      throw new SecurityException(ErrorCode.ORDER_ALREADY_CANCELLED);
+    }
+
+    // 3. Exchange 서버로 주문 취소 요청
+    ExchangeOrderCancelResponse exchangeResponse = sendOrderService.cancelOrderToExchange(orderId, order.getStock().getId(), order.getSide().getValue(), order.getPrice());
+
+    log.info("Order cancellation response: order-id(={}), match-result(={})", orderId, exchangeResponse.matchResult());
+
+    // 4. Exchange 서버 응답에 따른 후속 처리
+    return processCancelResponse(order, exchangeResponse);
+  }
+
+  /**
+   * Exchange 서버 취소 응답에 따른 후속 처리
+   */
+  private OrderCancelResponse processCancelResponse(Order order, ExchangeOrderCancelResponse exchangeResponse) throws SecurityException {
+    if (exchangeResponse.matchResult().equals("Cancelled")) {// 취소 성공: 지갑 롤백 및 내역 생성
+      processCancelledOrder(order);
+      return OrderCancelResponse.success();
+    } else if (exchangeResponse.matchResult().equals("Rejected")) {
+      log.info("Cancelled order not found. order-id(={})", order.getId());
+      throw new SecurityException(ErrorCode.ORDER_NOT_FOUND);
+    } else {
+      throw new SecurityException(ErrorCode.EXCHANGE_SERVER_COMMUNICATION_FAILED);
+    }
+  }
+
+  /**
+   * 취소된 주문 처리
+   */
+  private void processCancelledOrder(Order order) throws SecurityException {
+    int userId = order.getUser().getId();
+    int cancelledAmount = order.getUnfilledAmount();
+    int cancelledPrice = order.getPrice();
+    OrderSide orderSide = order.getSide();
+
+    // 1. 주문 상태 업데이트
+    order.cancel();
+
+    if (orderSide == OrderSide.BUY) {
+      // 매수 주문 취소
+      // 현금 지갑 롤백
+      CashWallet cashWallet = cashWalletRepository.findByUserIdWithLock(userId)
+          .orElseThrow(() -> new SecurityException(ErrorCode.CASH_WALLET_NOT_FOUND));
+
+      int cancelledAmountInCash = cancelledPrice * cancelledAmount;
+      cashWallet.updateOrderCancel(cancelledAmountInCash); // 매수 주문으로 묶인 금액 차감
+
+      // 현금 지갑 내역 생성
+      createCashWalletHistory(cashWallet, CashWalletTransactionType.TRADE_REFUND, cancelledAmountInCash);
+    } else {
+      // 매도 주문 취소
+      // 종목 지갑 롤백
+      StockWallet stockWallet = stockWalletRepository.findByUserIdAndStockIdWithLock(userId, order.getStock().getId())
+          .orElseThrow(() -> new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND));
+
+      stockWallet.updateOrderCancel(cancelledAmount); // 매도 수량 차감
+
+      // 종목 지갑 내역 생성
+      createStockWalletHistory(stockWallet, StockWalletTransactionType.SELL_ORDER_CANCEL, cancelledAmount);
+    }
+  }
+
+  /**
   * Maker가 매수자, Taker가 매도자인 경우 처리
   */
   private void processMakerBuyTakerSell(ExchangeOrderResponse exchangeResponse, MakerOrderResponse maker, int matchedAmount, int matchedPrice, int stockId) throws SecurityException {

@@ -11,7 +11,7 @@ EXPOSE 8081
 ENV TZ=Asia/Seoul
 
 # 애플리케이션 JAR를 app.jar로 복사 (Gradle 산출물 경로에 맞춰 조정)
-COPY build/libs/exchange-0.0.1-SNAPSHOT.jar app.jar
+COPY build/libs/*.jar app.jar
 
 # 컨테이너가 실행될 때 app.jar 실행
 ENTRYPOINT ["java","-jar","/app.jar"]

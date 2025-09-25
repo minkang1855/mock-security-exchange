@@ -1,15 +1,20 @@
 package edu.cnu.swacademy.exchange.order.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
 /**
  * 주문 처리 응답 DTO
  */
 public record OrderProcessResponse(
+    @JsonProperty("match_result")
     String matchResult,
+    @JsonProperty("taker_order_id")
     Integer takerOrderId,
     List<MakerOrderResponse> makers,
     Integer price,
+    @JsonProperty("total_matched_amount")
     Integer totalMatchedAmount,
     String reason
 ) {
