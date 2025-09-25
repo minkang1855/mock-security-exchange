@@ -11,6 +11,12 @@ public interface StockWalletRepository extends JpaRepository<StockWallet, Intege
 
   Optional<StockWallet> findByUserIdAndStockId(int userId, int stockId);
 
+  @Query("SELECT new edu.cnu.swacademy.security.stock.StockWalletBalanceProjection(" +
+      "sw.id, sw.reserve, sw.deposit, sw.isBlocked) " +
+      "FROM StockWallet sw " +
+      "WHERE sw.user.id = :userId AND sw.stock.id = :stockId")
+  Optional<StockWalletBalanceProjection> findProjectionByUserIdAndStockId(int userId, int stockId);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT sw FROM StockWallet sw WHERE sw.user.id = :userId AND sw.stock.id = :stockId")
   Optional<StockWallet> findByUserIdAndStockIdWithLock(int userId, int stockId);

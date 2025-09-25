@@ -110,29 +110,24 @@ public class StockWalletService {
    */
   public StockBalanceResponse getBalance(int userId, int stockId) throws SecurityException {
     // 1. 사용자의 특정 종목 증권 계좌 조회
-    StockWallet stockWallet = stockWalletRepository.findByUserIdAndStockId(userId, stockId)
+    StockWalletBalanceProjection stockWalletBalanceProjection = stockWalletRepository.findProjectionByUserIdAndStockId(userId, stockId)
         .orElseThrow(() -> {
           log.info("Stock wallet not found for user-id(={}), stock-id(={})", userId, stockId);
           return new SecurityException(ErrorCode.STOCK_WALLET_NOT_FOUND);
         });
 
-    if (stockWallet.isBlocked()) {
+    if (stockWalletBalanceProjection.isBlocked()) {
       throw new SecurityException(ErrorCode.STOCK_WALLET_BLOCKED);
     }
 
-    // 2. 잔고 계산
-    int reserve = stockWallet.getReserve();
-    int deposit = stockWallet.getDeposit();
-    int available = reserve - deposit;
-
-    log.info("Stock wallet balance retrieved: stock-wallet-id(={})", stockWallet.getId());
+    log.info("Stock wallet balance retrieved: stock-wallet-id(={})", stockWalletBalanceProjection.getId());
 
     return new StockBalanceResponse(
-        stockWallet.getId(),
+        stockWalletBalanceProjection.getId(),
         stockId,
-        reserve,
-        deposit,
-        available
+        stockWalletBalanceProjection.getReserve(),
+        stockWalletBalanceProjection.getDeposit(),
+        stockWalletBalanceProjection.getAvailable()
     );
   }
 
