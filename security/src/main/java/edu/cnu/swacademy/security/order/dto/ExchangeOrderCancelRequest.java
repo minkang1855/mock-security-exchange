@@ -5,7 +5,7 @@ package edu.cnu.swacademy.security.order.dto;
  */
 public record ExchangeOrderCancelRequest(
     int orderId,
-    int productId,
+    int stockId,
     String side,
     int price
 ) {}

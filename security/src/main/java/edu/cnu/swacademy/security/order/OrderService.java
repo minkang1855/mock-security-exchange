@@ -105,7 +105,7 @@ public class OrderService {
     validateWalletStatusAndUpdate(userId, request.stockId(), orderSide, request.price(), request.quantity());
 
     // 7. 주문 생성
-    Order order = orderRepository.save(
+    Order order = orderRepository.saveAndFlush(
         new Order(
             user, stock, orderSide, request.price(), request.quantity(), request.quantity()
         )
@@ -233,7 +233,7 @@ public class OrderService {
   /**
    * Exchange 서버 응답에 따른 후속 처리
    */
-  private OrderSubmitResponse processExchangeResponse(Order order, ExchangeOrderResponse exchangeResponse, OrderSubmitRequest request, OrderSide orderSide) throws SecurityException {
+  public OrderSubmitResponse processExchangeResponse(Order order, ExchangeOrderResponse exchangeResponse, OrderSubmitRequest request, OrderSide orderSide) throws SecurityException {
     return switch (exchangeResponse.matchResult()) {
       case "Unmatched" ->
         // 미체결: 후속 조치 불필요
@@ -256,7 +256,8 @@ public class OrderService {
   /**
   * 체결 완료 주문 처리
   */
-  private void processMatchedOrder(ExchangeOrderResponse exchangeResponse, OrderSubmitRequest request, OrderSide orderSide) throws SecurityException {
+  @Transactional(rollbackFor = Exception.class, isolation = Isolation.SERIALIZABLE)
+  public void processMatchedOrder(ExchangeOrderResponse exchangeResponse, OrderSubmitRequest request, OrderSide orderSide) throws SecurityException {
     List<MakerOrderResponse> makers = exchangeResponse.makers();
     for (MakerOrderResponse maker : makers) {
       int matchedAmount = maker.matchedAmount();

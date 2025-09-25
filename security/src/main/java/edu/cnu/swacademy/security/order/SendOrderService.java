@@ -81,17 +81,17 @@ public class SendOrderService {
     /**
      * Exchange 서버로 주문 취소 요청 전송
      */
-    public ExchangeOrderCancelResponse cancelOrderToExchange(int orderId, int productId, String side, int price) throws SecurityException {
+    public ExchangeOrderCancelResponse cancelOrderToExchange(int orderId, int stockId, String side, int price) throws SecurityException {
         try {
             String url = String.format("http://%s:%d/api/v1/market/order", exchangeServerHost, exchangeServerPort);
-            ExchangeOrderCancelRequest request = new ExchangeOrderCancelRequest(orderId, productId, side, price);
+            ExchangeOrderCancelRequest request = new ExchangeOrderCancelRequest(orderId, stockId, side, price);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             HttpEntity<ExchangeOrderCancelRequest> entity = new HttpEntity<>(request, headers);
 
-            log.info("Sending order cancellation to exchange server: orderId={}, productId={}, side={}, price={}", orderId, productId, side, price);
+            log.info("Sending order cancellation to exchange server: orderId={}, stockId={}, side={}, price={}", orderId, stockId, side, price);
 
             ResponseEntity<ExchangeOrderCancelResponse> response = restTemplate.exchange(
                 url, HttpMethod.DELETE, entity, ExchangeOrderCancelResponse.class);

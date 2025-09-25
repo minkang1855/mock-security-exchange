@@ -130,15 +130,15 @@ public class OrderBookService {
     private OrderProcessResponse attemptMatching(OrderProcessRequest request) {
         String oppositeSide = request.side().equals("BUY") ? "SELL" : "BUY";
 
-        // 반대편에 매칭되는 주문이 없음
-        if (popFrontOrderAtPrice(request.stockId(), oppositeSide, request.price()) == null) {
-            // 미체결 주문 추가
-            addUnfilledOrderToBook(request, request.amount());
-
-            // 반대편에 해당하는 Price, TotalUnit 제거
-            removePriceFromOrderBook(request.stockId(), oppositeSide, request.price());
-            return OrderProcessResponse.unmatched();
-        }
+//        // 반대편에 매칭되는 주문이 없음
+//        if (popFrontOrderAtPrice(request.stockId(), oppositeSide, request.price()) == null) {
+//            // 미체결 주문 추가
+//            addUnfilledOrderToBook(request, request.amount());
+//
+//            // 반대편에 해당하는 Price, TotalUnit 제거
+//            removePriceFromOrderBook(request.stockId(), oppositeSide, request.price());
+//            return OrderProcessResponse.unmatched();
+//        }
         
         int remainingAmount = request.amount();
         int totalMatchUnit = 0;
@@ -197,14 +197,14 @@ public class OrderBookService {
         }
         
         // remainingAmount가 0보다 크면 미체결된 주문을 Orders에 저장
-        if (remainingAmount > 0) {
+        if (remainingAmount > 0 && !makers.isEmpty()) {
             addUnfilledOrderToBook(request, remainingAmount);
         }
         
         if (!makers.isEmpty()) {
             return OrderProcessResponse.matched(request.orderId(), makers, request.price(), totalMatchUnit);
         } else {
-            throw new RuntimeException("Order processing failed");
+            return OrderProcessResponse.unmatched();
         }
     }
 
@@ -270,13 +270,13 @@ public class OrderBookService {
     /**
      * 특정 가격의 주문들 조회
      */
-    private List<OrderBookEntry> getOrdersAtPrice(int productId, String side, int price) {
-        String orderKey = getOrderKey(productId, side, price);
+    private List<OrderBookEntry> getOrdersAtPrice(int stockId, String side, int price) {
+        String orderKey = getOrderKey(stockId, side, price);
         List<Object> orders = redisTemplate.opsForList().range(orderKey, 0, -1);
 
         List<OrderBookEntry> result = new ArrayList<>();
         if (orders != null && !orders.isEmpty()) {
-            orders.forEach(order -> result.add((OrderBookEntry) order));
+            orders.forEach(order -> result.add(convertToOrderBookEntry(order)));
         }
         return result;
     }

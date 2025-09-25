@@ -16,13 +16,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
-@SQLRestriction("deleted_at IS NULL")
-@SQLDelete(sql = "UPDATE `order` SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @Table(name = "`order`")
 @Entity
 public class Order extends BaseEntity {
@@ -67,7 +63,7 @@ public class Order extends BaseEntity {
   }
 
   public void cancel() {
-    this.unfilledAmount = 0;
     this.canceledAmount = unfilledAmount;
+    this.unfilledAmount = 0;
   }
 }

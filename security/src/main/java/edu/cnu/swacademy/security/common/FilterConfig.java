@@ -25,6 +25,8 @@ public class FilterConfig {
 
     registrationBean.addUrlPatterns("/api/v1/order/*");
     registrationBean.addUrlPatterns("/api/v1/orderbook/*");
+
+    registrationBean.addUrlPatterns("/api/v1/match/*");
     
     registrationBean.setOrder(1);
     return registrationBean;
